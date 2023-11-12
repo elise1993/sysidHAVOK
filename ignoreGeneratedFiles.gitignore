@@ -3,3 +3,6 @@
 
 ## Ignore MATLAB project files
 /gpuHAVOK.prj
+
+## Ignore MATLAB .asv files
+*.asv

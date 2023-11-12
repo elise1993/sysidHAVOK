@@ -30,7 +30,7 @@
 function [A,B,U,S,V,H,x,t,r] = sysidHAVOK(rmax,stackmax,x,t)
 
 % specify number of delay coordinates (stackmax) and maximum number of
-% singular values to include in the HAVOK model (rmax) (default):
+% singular values to include in the HAVOK model (rmax) (default values):
 if nargin == 0
     % define algorithm to automatically determine a good stackmax/rmax
     stackmax = 20;
@@ -45,10 +45,8 @@ end
 n = length(x);
 
 % construct Hankel matrix and apply SVD
-H = nan(stackmax,n-stackmax);
-for k=1:stackmax
-    H(k,:) = x(k:end-stackmax-1+k);
-end
+ij = (1:n-stackmax) + (0:(stackmax-1))';
+H = x(ij);
 
 [U,S,V] = svd(H,'econ');
 

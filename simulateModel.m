@@ -38,6 +38,7 @@ x0 = [5, 10, 2]';
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 % superfluous GPU support
 =======
 % superfluous GPU support (add to dependent functions instead)
@@ -52,6 +53,8 @@ end
 >>>>>>> f047c9c (Version 1 of algorithm, without any optimization.)
 =======
 >>>>>>> 0024454 (added superfluous GPU support)
+=======
+>>>>>>> 4065f4d (Vectorized Hankel matrix construction)
 % construct HAVOK model from data
 x = x(:,1);
 stackmax = 40;
@@ -123,7 +126,6 @@ xlabel("v_1(t)"); ylabel("v_2(t)"); zlabel("v_3(t)")
 legend("True Trajectory","Open-Loop Forecast (Linear)","Closed-Loop Forecast (Linear)")
 set(gca,fontsize=20)
 view(-45,45)
-
 
 
 
