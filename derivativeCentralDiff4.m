@@ -14,16 +14,12 @@ n = length(x);
 dt = t(2)-t(1);
 dxdt = nan(n-5,1);
 
-% compute derivatives n+2
-for i = 3:n-3
-    % use central differencing to compute most derviatives
-    dxdt(i-2) = (-x(i+2) + 8*x(i+1) - 8*x(i-1) + x(i-2)) / (12*dt);
-end
+% use central differencing to compute most derviatives
+i = 3:n-3;
+dxdt(i-2) = (-x(i+2) + 8*x(i+1) - 8*x(i-1) + x(i-2)) / (12*dt);
 
-% for i = n-4:n
-%     % use Euler forward for the final derivatives (creates instability)
-%     dxdt(i) = (x(i) - x(i-3))/(3*dt);
-% end
-
+% use Euler forward for the final derivatives (creates instability)
+% i = n-4:n
+% dxdt(i) = (x(i) - x(i-3))/(3*dt);
 
 end
