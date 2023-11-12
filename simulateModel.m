@@ -11,7 +11,7 @@
 % 
 %    - stackmax - number of time(delay)-shifted copies of the data x, which
 %    represents the memory of the HAVOK model. Similar to an Auto-Regressive
-%    model, Aalonger memory allows for longer dependencies, but increases
+%    model, A longer memory allows for longer dependencies, but increases
 %    the complexity of the model.
 % 
 %    - rmax - the maximum rank of the HAVOK model, defined as the maximum
@@ -68,19 +68,14 @@ f = @(t,v) A(:,1:r-1)*v(1:r-1);
 v0 = inv(S)*inv(U)*H;
 v0 = v0(1:r-1,1);
 
-% solve system of ODEs (closed loop simulation)
+% solve system of ODEs (closed loop forecast) [RKF45]
 [t,vSim] = ode45(@(t,v) f(t,v),t,v0);
 
-% get true linear time series in delay coordinates
-% vTrue = V(:,1:r-1);
-
-% solve system of ODEs (open loop simulation)
-vTrue = nan(size(V(:,1:r-1)));
+% solve system of ODEs (open loop forecast) [Euler forward]
 dt = t(2)-t(1);
-for k = 2:length(t)-stackmax
-    % Euler forward
-    vTrue(k,:) = V(k-1,1:r-1)' + (A(:,1:r-1)*V(k,1:r-1)' - B(1:r-1).*V(k,1:r-1)')*dt;
-end
+k = 2:length(t)-stackmax;
+vTrue = [V(1,1:r-1) ; V(k-1,1:r-1) + ...
+    (A(:,1:r-1)*V(k,1:r-1)' - B(1:r-1).*V(k,1:r-1)')'*dt];
 
 % reconstruct Hankel matrix H from v
 Hsim = U*S(:,1:r-1)*vSim';
@@ -91,7 +86,7 @@ Htrue = U*S(:,1:r-1)*vTrue';
 % xTrue = [Htrue(1,:)'; Htrue(2:end,end)];
 
 % reconstruct x using all values in the Hankel matrix
-% (more accurate but cannot include zeroes in H; unlikely)
+% (more accurate but cannot include zeroes in the data x)
 xSim = spdiags(Hsim(end:-1:1,:));
 xSim(xSim==0) = nan;
 xSim = nanmean(xSim)';

@@ -69,10 +69,7 @@ r = length(singularVals(singularVals > hardThreshold));
 r = min(rmax,r);
 
 % compute derivative using 4th order central difference
-dVdt = nan(n-stackmax-5,r);
-for k = 1:r
-    dVdt(:,k) = derivativeCentralDiff4(V(:,k),t);
-end
+dVdt = derivativeCentralDiff4(V(:,1:r),t);
 
 %  build linear regression model in delay coordinates
 Xi = V(3:end-3,1:r)\dVdt;
