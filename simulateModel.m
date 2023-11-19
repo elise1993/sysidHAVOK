@@ -23,18 +23,37 @@
 
 %   Author(s): Elise Jonsson, based on code by Brunton & Kutz (2022)
 
-% initialization
+%% Data Pre-Processing
 close all
 clear
 clc
 
 % linear data
-% [t,x] = generateLinear();
+% tmax = 1000;
+% dt = 0.05;
+% t = 0:dt:tmax;
+% [t,x] = generateLinear(t=t);
+% x = x(:,1);
 
 % nonlinear data
-t = linspace(0,10,1000);
+tmax = 200;
+dt = 0.05;
+t = 0:dt:tmax;
+n = length(t);
 x0 = [5, 10, 2]';
-[t,x] = generateLorenz(t,x0);
+[t,x] = generateLorenz(t=t,x0=x0);
+x = x(:,1);
+
+% partition sequential data into training, validation, and test data
+[xtrain,xval,xtest] = partitionData(x,.6,.2,.2);
+[ttrain,tval,ttest] = partitionData(t,.6,.2,.2);
+
+%% Construct HAVOK Model
+
+% hyperparameters
+stackmax = 350;
+rmax = stackmax;
+degOfSparsity = 0.025;
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -56,69 +75,75 @@ end
 =======
 >>>>>>> 4065f4d (Vectorized Hankel matrix construction)
 % construct HAVOK model from data
-x = x(:,1);
-stackmax = 40;
-rmax = stackmax;
-[A,B,U,S,V,H,x,t,r] = sysidHAVOK(rmax,stackmax,x,t);
+[A,B,U,S,V,r] = sysidHAVOK(xtrain,ttrain, ...
+    'stackmax',stackmax, ...
+    'rmax',rmax, ...
+    'method','sparse',...
+    'degOfSparsity',degOfSparsity);
 
 % build linear system dvdt = f(t,v) = Av_[1:r-1](t)
 f = @(t,v) A(:,1:r-1)*v(1:r-1);
 
-% get initial conditions in delay coordinates
-v0 = inv(S)*inv(U)*H;
-v0 = v0(1:r-1,1);
+%% Forecast and Validate Model
 
-% solve system of ODEs (closed loop forecast) [RKF45]
-[t,vSim] = ode45(@(t,v) f(t,v),t,v0);
+% get initial conditions for validation data in delay coordinates
+Hval = HankelSVD(xval,stackmax);
+Vval = inv(S)*inv(U)*Hval;
+v0 = Vval(1:r-1,1);
 
-% solve system of ODEs (open loop forecast) [Euler forward]
-dt = t(2)-t(1);
-k = 2:length(t)-stackmax;
-vTrue = [V(1,1:r-1) ; V(k-1,1:r-1) + ...
-    (A(:,1:r-1)*V(k,1:r-1)' - B(1:r-1).*V(k,1:r-1)')'*dt];
+% closed loop forecast with RKF45 during the validation period
+[~,vSim] = ode45(@(t,v) f(t,v),tval,v0);
 
-% reconstruct Hankel matrix H from v
+% recover Hankel matrix from the simulated data
 Hsim = U*S(:,1:r-1)*vSim';
-Htrue = U*S(:,1:r-1)*vTrue';
 
-% reconstruct x using edges of Hankel matrix
-% xSim = [Hsim(1,:)'; Hsim(2:end,end)];
-% xTrue = [Htrue(1,:)'; Htrue(2:end,end)];
-
-% reconstruct x using all values in the Hankel matrix
-% (more accurate but cannot include zeroes in the data x)
+% recover the simulated x by taking the cross-diagonal average of the Hankel matrix
 xSim = spdiags(Hsim(end:-1:1,:));
 xSim(xSim==0) = nan;
 xSim = nanmean(xSim)';
+xSim = xSim(1:length(tval));
 
-xTrue = spdiags(Htrue(end:-1:1,:));
-xTrue(xTrue==0) = nan;
-xTrue = nanmean(xTrue)';
+% model performance on validation data (RMSE)
+rmseSim = rmse(xSim(1:length(xval)),xval);
 
-% Root mean square error
-rmseOpen = rmse(xTrue(2:end),x(2:end-1));
-rmseClosed = rmse(xSim(1:length(x)),x);
+%% Plotting
 
 % plot true vs simulated
 figure; hold on
-plot(x,'b',linewidth=2)
-plot(xTrue,'g--',linewidth=2)
-plot(xSim,'r:',linewidth=2)
-title("Simulated vs True Behavior")
+plot(tval,xval,'b',linewidth=2)
+plot(tval,xSim,'r:',linewidth=2)
+title("Simulated vs True Behavior on Validation Data")
 xlabel("t"); ylabel("x(t)")
-legend("True Trajectory","Open-Loop Forecast (Linear)","Closed-Loop Forecast (Linear)")
+legend("True Trajectory","Closed-Loop Forecast (Linear)")
 set(gca,fontsize=20)
-text(.65,.8,0,"RMSE (Open-Loop): "+num2str(rmseOpen),units='normalized',fontsize=20)
-text(.65,.75,0,"RMSE (Closed-Loop): "+num2str(rmseClosed),units='normalized',fontsize=20)
+text(.65,.75,0,"RMSE (Linear): "+num2str(rmseSim),units='normalized',fontsize=20)
+
+% plot true vs simulated (first 6 delay-coordinates)
+figure; tiledLayout = tiledlayout(3,2);
+title(tiledLayout,"Simulated vs True Behavior on Validation \newline Data in the Trained Delay Coordinates")
+for i = 1:6
+    try
+        nexttile
+        plot(Vval(:,i),'b')
+        hold on
+        plot(vSim(:,i),'r--')
+        ylabel("v " + i)
+    catch
+    end
+
+    if i==1
+        leg = legend('Target','Forecast');
+        set(leg,'Orientation','Horizontal','Position',[0.757,0.02,0.15,0.04],'Units','Normalized')
+    end
+end
 
 % reconstructed attractor
 figure; hold on
-plot3(V(:,1),V(:,2),V(:,3),'b',linewidth=2)
-plot3(vTrue(:,1),vTrue(:,2),vTrue(:,3),'g--',linewidth=2)
+% plot3(Vval(:,1),Vval(:,2),Vval(:,3),'b',linewidth=2)
 plot3(vSim(:,1),vSim(:,2),vSim(:,3),'r:',linewidth=2)
 title("Reconstructed Attractor of the Dominant Delay Variables")
 xlabel("v_1(t)"); ylabel("v_2(t)"); zlabel("v_3(t)")
-legend("True Trajectory","Open-Loop Forecast (Linear)","Closed-Loop Forecast (Linear)")
+legend("Closed-Loop Forecast (Linear)")
 set(gca,fontsize=20)
 view(-45,45)
 

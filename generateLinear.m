@@ -8,29 +8,30 @@
 %   Author(s): Elise Jonsson
 
 % generate data by solving the following Linear system
-function [t,x] = generateLinear(t,x0)
+function [t,x] = generateLinear(opt)
 
-% initial conditions (default)
-switch nargin
-    case 0
-        t = 0:.1:10;
-        tmax = max(t);
-        dt = t(2)-t(1);
-        x0 = [10;10]';
-    case 1
-        x0 = [10;10]';
-    otherwise
+arguments
+    opt.t (:,1) {mustBeReal,mustBeMonotonic(opt.t)} = 0:.1:10
+    opt.x0 (1,2) {mustBeReal} = [10;10]'
 end
 
 % system
-A = [-0.1+1i*.5, 1 ; 0, -0.1-1i*.5]; % diagonalizable
-% A = [-0.1+1i*.5, 1 ; 0, -0.1+1i*.5]; % undiagonalizable
+A = [-0.1+1i*.5, 1 ; 0, -0.1-1i*.5];
 f = @(t,x) A*x;
 
-% solve the Lorenz system using the Runge-Kutta 4,5 scheme:
-options = odeset('RelTol',1e-12,'AbsTol',1e-12*ones(size(x0)));
-[t,x] = ode45(f,t,x0,options);
+% solve the system using the RKF 4,5 scheme:
+options = odeset('RelTol',1e-12,'AbsTol',1e-12*ones(size(opt.x0)));
+[t,x] = ode45(f,opt.t,opt.x0,options);
 x = real(x);
 
+end
+
+% test for monotonicity
+function mustBeMonotonic(a)
+    if any(diff(a) < 0)
+        eid = 'Monotonic:false';
+        msg = 'The time array (a) must consist of monotonically increasing values!';
+        error(eid,msg)
+    end
 end
 

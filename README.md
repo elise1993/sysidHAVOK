@@ -1,4 +1,4 @@
-# gpuHAVOK
+# gpuHAVOK (outdated!)
 This is a testbed for system identification and forecasting of dynamical systems using the Hankel Alternative View of Koopman (HAVOK) algorithm. This code is based on work by Brunton & Kutz (2022) ["Data-Driven Science and Engineering", Cambridge University Press, URL: https://www.cambridge.org/highereducation/product/9781009089517/book], and my aim is to improve the efficiency of the algorithm through GPU/CPU optimization. The code is structured as follows:
 
 1. **simulateModel.m**

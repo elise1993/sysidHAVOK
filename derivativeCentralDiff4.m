@@ -22,6 +22,6 @@ dxdt(i-2,j) = (-x(i+2,j) + 8*x(i+1,j) - 8*x(i-1,j) + x(i-2,j)) / (12*dt);
 
 % use Euler forward for the final derivatives (creates instability)
 % i = n-4:n
-% dxdt(i,j) = (x(i,j) - x(i-3,j))/(3*dt);
+% dxdt(i,j) = (x(i,j) - x(i-1,j))/dt;
 
 end
