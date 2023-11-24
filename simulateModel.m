@@ -51,9 +51,9 @@ x = x(:,1);
 %% Construct HAVOK Model
 
 % hyperparameters
-stackmax = 350;
-rmax = stackmax;
-degOfSparsity = 0.025;
+stackmax = 40;
+rmax = 15;
+degOfSparsity = 0;
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -88,11 +88,11 @@ f = @(t,v) A(:,1:r-1)*v(1:r-1);
 
 % get initial conditions for validation data in delay coordinates
 Hval = HankelSVD(xval,stackmax);
-Vval = inv(S)*inv(U)*Hval;
-v0 = Vval(1:r-1,1);
+Vval = (inv(S)*inv(U)*Hval)';
+v0 = Vval(1,1:r-1);
 
 % closed loop forecast with RKF45 during the validation period
-[~,vSim] = ode45(@(t,v) f(t,v),tval,v0);
+[~,vSim] = ode45(@(t,v) f(t,v),[tval;ttest],v0);
 
 % recover Hankel matrix from the simulated data
 Hsim = U*S(:,1:r-1)*vSim';
@@ -101,7 +101,7 @@ Hsim = U*S(:,1:r-1)*vSim';
 xSim = spdiags(Hsim(end:-1:1,:));
 xSim(xSim==0) = nan;
 xSim = nanmean(xSim)';
-xSim = xSim(1:length(tval));
+xSim = xSim(1:length([tval;ttest]));
 
 % model performance on validation data (RMSE)
 rmseSim = rmse(xSim(1:length(xval)),xval);
@@ -111,7 +111,7 @@ rmseSim = rmse(xSim(1:length(xval)),xval);
 % plot true vs simulated
 figure; hold on
 plot(tval,xval,'b',linewidth=2)
-plot(tval,xSim,'r:',linewidth=2)
+plot([tval;ttest],xSim,'r:',linewidth=2)
 title("Simulated vs True Behavior on Validation Data")
 xlabel("t"); ylabel("x(t)")
 legend("True Trajectory","Closed-Loop Forecast (Linear)")
