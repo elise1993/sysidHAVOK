@@ -87,10 +87,12 @@ switch opt.method
 
     case 'sparse'
 
+        lambda = opt.degOfSparsity * max(Xi,[],'all');
+
         for k=1:10
-            smallIndices = (abs(Xi) < opt.degOfSparsity);
+            smallIndices = abs(Xi) < lambda;
             Xi(smallIndices) = 0;
-            for i = 1:r % r???
+            for i = 1:r
                 biginds = ~smallIndices(:,i);
                 Xi(biginds,i) = V(3:end-3,biginds)\dVdt(:,i);
             end
