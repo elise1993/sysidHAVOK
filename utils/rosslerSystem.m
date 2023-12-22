@@ -8,20 +8,20 @@
    
 %   Author(s): Elise Jonsson
 
-function dxdt = lorenzSystem(t,x,beta)
+function dxdt = rosslerSystem(t,x,beta)
 
 % default parameter values (chaotic conditions)
 if nargin < 3
-    beta = [10, 28, 8/3]';
+    beta = [0.1,0.1,14]';
 end
 
 % model equations
 dxdt = [
-    beta(1) * (x(2) - x(1));
+    -x(2) - x(3);
 
-    x(1) * (beta(2) - x(3)) - x(2);
+    x(1) + beta(1)*x(2);
     
-    x(1) * x(2) - beta(3) * x(3);
+    beta(2) + x(3)*(x(1) - beta(3))
     
     ];
 

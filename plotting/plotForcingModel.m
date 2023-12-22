@@ -28,8 +28,8 @@ for i=1:2
     range = [min(x)-std(x),max(x)+std(x)];
     areaRangeTrain = {[t(1),tVal(1),tVal(1),t(1)],[range(1),range(1),range(2),range(2)]};
     areaRangeVal = {[tVal(1),tVal(end),tVal(end),tVal(1)],[range(1),range(1),range(2),range(2)]};
-    patch(areaRangeTrain{1},areaRangeTrain{2},'g','FaceAlpha',0.03,'EdgeColor','none')
-    patch(areaRangeVal{1},areaRangeVal{2},'r','FaceAlpha',0.03,'EdgeColor','none')
+    patch(areaRangeTrain{1},areaRangeTrain{2},'g','FaceAlpha',0.05,'EdgeColor','none')
+    patch(areaRangeVal{1},areaRangeVal{2},'r','FaceAlpha',0.05,'EdgeColor','none')
 
     % lines
     plot([tTrain;tVal],[xTrain;xVal],linewidth=2,color="#0072BD")
@@ -44,8 +44,8 @@ for i=1:2
         title("Random Forest Regressor (Open-Loop Forecasting Performance)")
         xlabel('')
         xlim([zoomCoords(1),zoomCoords(3)])
-        text(0.22,.92,"Training",'Units','normalized','fontsize',16);
-        text(0.72,.92,"Validation",'Units','normalized','fontsize',16)
+        text(0.22,.92,"Training",'Units','normalized','fontsize',18);
+        text(0.72,.92,"Validation",'Units','normalized','fontsize',18)
     elseif i==2
         xlabel('time (t)')
         xlim([zoomCoords(2),zoomCoords(4)])
@@ -56,5 +56,6 @@ end
 leg = legend('','','True','Predicted');
 leg.Orientation = "horizontal";
 leg.Position = [.74,0,.1,.05];
+% set(gcf,'color','w')
 
 end

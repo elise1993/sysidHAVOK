@@ -3,27 +3,19 @@ close all; clear; clc
 mkdir("./downloaded"); mkdir("./data");
 addpath('./utils','./plotting','./data','./downloaded');
 
-% generate nonlinear data (Lorenz system)
-tmax = 200;
-dt = 0.01;
-t = dt:dt:tmax;
-x0 = [-8, 8, 27]';
-beta = [10, 28, 8/3]';
-
-[t,x] = generateLorenz(t, ...
-    'initialCondition',x0, ...
-    'beta',beta ...
-    );
-
+% generate nonlinear data
+[t,x] = generateLorenz();  % Lorenz system
+% [t,x] = generateRossler(); % Rossler system
 x = x(:,1);
 nVars = size(x,2);
 
 % interpolate
+tmax = t(end);
+dt = t(2)-t(1);
 dt = 0.1*dt;
 tNew = (dt:dt:tmax)';
 x = interp1(t,x,tNew,"makima","extrap");
 t = tNew;
-N = length(x);
 
 % partition into training/validation/test data and visualize
 [xTrain,xVal,xTest] = partitionData(x,0.5,0.1,'testData',true);
@@ -106,7 +98,7 @@ plotForcingModel( ...
     {vrpTrain,vrpVal}, ...
     zoomCoords);
 
-plotHistogram(VTrain(2:end,r))
+plotHistogram(VTrain(:,r));
 
 %% Forecast and Validate Model
 
@@ -129,10 +121,6 @@ for i = 1:n
 
     vr(i+1) = predict(Regressor,h(1:D:end)');
 
-    %vAug = expM*[v(:,i); vr(i); vr(i+1)-vr(i)];
-    %v(:,i+1) = vAug(1:r-1);
-
-    % or equivalently: (MUCH FASTER!)
     v(:,i+1) = Ad*v(:,i) + Bd0*vr(i) + Bd1*vr(i+1);
 
     if mod(i,100)==0 || i==n

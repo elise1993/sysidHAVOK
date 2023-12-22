@@ -37,5 +37,6 @@ end
 leg = legend('True','Predicted');
 leg.Orientation = "horizontal";
 leg.Position = [.74,0,.1,.05];
+% set(gcf,'color','w')
 
 end

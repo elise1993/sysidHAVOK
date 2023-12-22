@@ -9,18 +9,18 @@
 %   Author(s): Elise Jonsson
 
 % generate data by solving the Lorenz system
-function [t,x] = generateLorenz(opt)
+function [t,x] = generateRossler(opt)
 
 arguments
     opt.time (:,1) {mustBeReal,...
-        miscFunctions.mustBeMonotonic(opt.time)} = 0.01:0.01:200;
-    opt.initialCondition (3,1) {mustBeReal} = [-8, 8, 27]'
-    opt.beta (3,1) = [10, 28, 8/3]'
+        miscFunctions.mustBeMonotonic(opt.time)} = 0.01:0.01:200
+    opt.initialCondition (3,1) {mustBeReal} = [1,1,1]'
+    opt.beta (3,1) = [0.1,0.1,14]'
 end
 
-% solve the Lorenz system using the RKF45 scheme:
+% solve the Rossler system using the RKF45 scheme:
 options = odeset('RelTol',1e-12,'AbsTol',1e-12*ones(1,3));
-[t,x] = ode45(@(t,x) lorenzSystem(t,x,opt.beta) ...
+[t,x] = ode45(@(t,x) rosslerSystem(t,x,opt.beta) ...
     ,opt.time,opt.initialCondition,options);
 
 end
