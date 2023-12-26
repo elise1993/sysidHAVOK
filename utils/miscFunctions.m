@@ -1,4 +1,11 @@
 classdef miscFunctions
+    %miscFunctions Miscellaneous functions used throughout the code
+    %
+    %    miscFunctions is a class file containing small utility functions
+    %    that are used throughout the code.
+    %
+
+    %   Copyright 2023 Elise Jonsson
 
     methods(Static)
 

@@ -1,4 +1,10 @@
 function h = plotHistogram(x)
+%plotHistogram Plot histogram
+%
+%    h = plotHistogram(x) plots the histogram of x.
+%
+   
+%   Copyright 2023 Elise Jonsson
 
 h = figure;
 histogram(x, ...

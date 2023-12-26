@@ -1,14 +1,13 @@
-%Data Partition
-   %
-   %    [xtrain,xval,xtest] = partitionData(x,p1,p2,opt) partitions a
-   %    sequential data set x into training, validation, and optional 
-   %    testing data sets xtrain,xval,xtest with relative proportions p1, 
-   %    p2, and p3, where p3 = 1 - (p1 + p2).
-   %
-   
-%   Author(s): Elise Jonsson
-
 function [xtrain,xval,xtest] = partitionData(x,p1,p2,opt)
+%partitionData Function that partitions data
+%
+%    [xtrain,xval,xtest] = partitionData(x,p1,p2,opt) partitions a
+%    sequential data set x into training, validation, and optional
+%    testing data sets xtrain, xval, xtest with relative proportions p1,
+%    p2, and p3, where p3 = 1 - (p1 + p2).
+%
+
+%   Copyright 2023 Elise Jonsson
 
 arguments
     x (:,1)
@@ -29,4 +28,3 @@ if opt.testData == true
     xtest = x(iTest);
 end
 
-end

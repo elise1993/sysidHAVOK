@@ -1,8 +1,0 @@
-## This file is fetched by the algorithm from another repo and should not be included in this repo.
-/optimal_SVHT_coef.m
-
-## Ignore MATLAB project files
-/gpuHAVOK.prj
-
-## Ignore MATLAB .asv files
-*.asv

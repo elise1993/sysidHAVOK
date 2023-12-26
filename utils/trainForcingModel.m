@@ -1,4 +1,19 @@
 function Regressor = trainForcingModel(vrTrain,vrVal,method,opt)
+%trainForcingModel Train Machine Learning model [unfinished]
+%
+%    Regressor = trainForcingModel(vrTrain,vrVal,method,opt) trains a
+%    Machine Learning (ML) model, using the columns of vrTrain as
+%    predictors for the response variable vrVal. The type of ML method is
+%    specified by "method", and can be a RandomForestRegressor,
+%    RegressionTree, Multilayer Perceptron, etc. The model output can be
+%    used with the MATLAB function predict.m to make predictions. Optional
+%    arguments are provided to specify the number of regression trees and
+%    splits. Other properties can be edited within the function.
+% 
+%    Note: This function is a placeholder and unfinished.
+%
+   
+%   Copyright 2023 Elise Jonsson
 
 arguments
     vrTrain (:,:)

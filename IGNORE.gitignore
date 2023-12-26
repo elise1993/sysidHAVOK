@@ -1,0 +1,12 @@
+## These files are fetched by the algorithm from other repos and should not be included in this repo.
+downloaded/optimal_SVHT_coef.m
+downloaded/poolData.m
+downloaded/poolDataLIST.m
+downloaded/sparsifyDynamics.m
+
+## Ignore MATLAB project files
+/gpuHAVOK.prj
+
+## Ignore MATLAB .asv files
+*.asv
+utils/*.asv

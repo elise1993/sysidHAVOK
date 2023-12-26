@@ -1,4 +1,12 @@
 function dxdt = SINDyModel(t,x,Xi,polyDegree)
+%SINDyModel Function output for the SINDy model
+%
+%    dxdt = SINDyModel(t,x,Xi,polyDegree) produces a function for the SINDy
+%    model with polynomial coefficients Xi and polynomial degree polyDegree
+%    which can be used in e.g., ode45.
+%
+   
+%   Copyright 2023 Elise Jonsson
 
 nVars = size(Xi,2);
 ind = 1;
@@ -35,4 +43,3 @@ end
 
 dxdt = sum(dxdt,2);
 
-end

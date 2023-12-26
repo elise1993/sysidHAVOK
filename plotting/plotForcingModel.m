@@ -1,4 +1,12 @@
 function h = plotForcingModel(Train,Val,Predictions,zoomCoords)
+%plotForcingModel Plot forcing model
+%
+%    h = plotForcingModel(Train,Val,Predictions,zoomCoords) plots the
+%    training and validation data used for the forcing model, along with
+%    open-loop (single-step) predictions.
+%
+   
+%   Copyright 2023 Elise Jonsson
 
 arguments
     Train (:,:)

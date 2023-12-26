@@ -1,4 +1,11 @@
 function h = plotData(tTrain,xTrain,tVal,xVal)
+%plotData Plot training/validation data
+%
+%    h = plotData(tTrain,xTrain,tVal,xVal) plots the training and
+%    validation data and nicely visualizes it.
+%
+   
+%   Copyright 2023 Elise Jonsson
 
 arguments
     tTrain (:,1) {miscFunctions.mustBeMonotonic(tTrain)}

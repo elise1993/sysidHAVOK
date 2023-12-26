@@ -1,4 +1,11 @@
 function h = plotForecast(tVal,xVal,xSim,vrVal,vrSim)
+%plotForecast Plot forecast
+%
+%    h = plotForecast(tVal,xVal,xSim,vrVal,vrSim) plots the forecasted data
+%    xSim, vrSim and compares it to the true data xVal, xSim.
+%
+   
+%   Copyright 2023 Elise Jonsson
 
 arguments
     tVal (:,1) {miscFunctions.mustBeMonotonic(tVal)}
