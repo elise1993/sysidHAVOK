@@ -6,7 +6,7 @@ This is a testbed for system identification and forecasting of dynamical systems
 
 Any nonlinear dynamical system of the form dxdt = f(x(t)) may be represented by an infinite-dimensional linear system, defined by a so-called Koopman-operator (Mezić 2005). Finding an asymptotically large system like this is an ill-posed problem, which has led to the development of methods that attempt to approximate the Koopman operator. One such method is the Dynamic Mode Decomposition (DMD) and its extension, which have shown great promise at representing nonlinear and chaotic systems. DMD attempts to find a best-fit linear model between the current and next time step using regression, so that:
 
-(1) dxdt = Ax
+(1) x_k+1 = A x_k
 
 While the standard DMD is quite limited in representing nonlinear systems, extensions to the algorithm, such as extended DMD, allow for greater representation. Here, we focus on HAVOK, or Hankel DMD, which is one of the more recent developments. HAVOK organizes the data x into a Hankel matrix (a matrix of time-shifted copies of x), and then applies Singular Value Decomposition (SVD) and truncation to obtain a new coordinate system we call delay coordinates. These delay coordinates turn out to be highly useful for representing systems with long-term memory effects, which are prevalent in many dynamical systems. The variables in these coordinates, or delay variables, are denoted by v_i, so that the HAVOK model produces a truncated linear system of the following form, where B vr is a forcing term.
 
@@ -32,7 +32,7 @@ This is the main code, which takes some data, interpolates it, partitions it int
 
 - degOfSparsity - specifies the degree at which unimportant variables v_i are truncated in the HAVOK-SINDy algorithm.
 
-- MLmethod - specify which type of model is trained on the forcing term vr. The user may specify Random Forest Regression (RFR), Regression Trees, and various Neural Networks; Multilayer Perceptrons (MLPs), Long-Short Term Memory (LSTM) models, etc.
+- MLmethod - specify which type of model is trained on the forcing term vr. The user may specify Random Forest Regression (RFR), Regression Trees, and various Neural Networks; Multilayer Perceptrons (MLPs), Long-Short Term Memory (LSTM) models, etc. Ensemble methods like RegressionTreeEnsemble require the user to specify "Bag" or "Boost", which construct the individual regressors in different ways. "Bag" is faster, as it can be constructed in parallel, whereas "Boost" builds the individual models sequentially. "Bag" is more prone to underfitting whereas "Boost" is more prone to overfitting.
 
 - treeSize/maxNumSplits - specifies properties of the ML method. In this case the number of ensembled trees and number of splits in those trees.
 

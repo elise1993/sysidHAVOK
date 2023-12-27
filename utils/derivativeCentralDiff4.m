@@ -14,12 +14,7 @@ function dxdt = derivativeCentralDiff4(x,t)
 dt = t(2)-t(1);
 dxdt = nan(n-5,m);
 
-% use central differencing to compute most derviatives
 i = 3:n-3;
 j = 1:m;
 dxdt(i-2,j) = (-x(i+2,j) + 8*x(i+1,j) - 8*x(i-1,j) + x(i-2,j)) / (12*dt);
-
-% use Euler forward for the final derivatives (creates instability)
-% i = n-4:n
-% dxdt(i,j) = (x(i,j) - x(i-1,j))/dt;
 

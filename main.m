@@ -24,6 +24,10 @@
 % size, but it will make identification of an optimal ML method more
 % difficult and might be prohibitevly expensive to run.
 % 
+% degOfNoise - the amount of Gaussian noise in the data x, as a percentage
+% of the standard deviation of x. Note: The noise level in x will affect
+% the optimal stackmax and r of the model.
+% 
 % polyDegree - specifies the polynomial degree of the HAVOK-SINDy model.
 % The standard HAVOK algorithm finds a linear representation in delay
 % coordinates using least-squares regression, meaning that the algorithm
@@ -39,7 +43,8 @@
 % MLmethod - specify which type of model is trained on the forcing term vr.
 % The user may specify Random Forest Regression (RFR), Regression Trees,
 % and various Neural Networks; Multilayer Perceptrons (MLPs), Long-Short
-% Term Memory (LSTM) models, etc.
+% Term Memory (LSTM) models, etc. Note: Some of these methods are sensitive
+% to outliers.
 % 
 % treeSize/maxNumSplits - specifies properties of the ML method. In this
 % case the number of ensembled trees and number of splits in those trees.
@@ -52,40 +57,51 @@
 
 %   Copyright 2023 Elise Jonsson
 
-%% Generate/Import Data
+%% Prepare Data
 close all; clear; clc
-mkdir("./downloaded"); mkdir("./data");
-addpath('./utils','./plotting','./data','./downloaded');
+mkdir("./downloaded");
+addpath('./utils','./plotting',genpath('./data/'),'./downloaded');
 
 % generate nonlinear data
 [t,x] = generateLorenz();  % Lorenz system
 % [t,x] = generateRossler(); % Rossler system
 x = x(:,1);
-nVars = size(x,2);
 
 % interpolate
 tmax = t(end);
 dt = t(2)-t(1);
 dt = 0.1*dt;
 tNew = (dt:dt:tmax)';
-x = interp1(t,x,tNew,"makima","extrap");
+x = interp1(t,x,tNew,"cubic","extrap");
 t = tNew;
 
-% standardize (removes constants from HAVOK model)
-x = normalize(x);
+% add noise, remove missing values/outliers, and normalize
+degOfNoise = 0;
+x = x + degOfNoise*std(x,'omitmissing')*randn(size(x));
 
-% partition into training/validation/test data and visualize
+outliers = find(isoutlier(x));
+x(outliers) = nan;
+x = fillmissing(x,'makima');
+
+% [x,xMean,xSTD] = normalize(x);
+
+% partition into training/validation/test data
 [xTrain,xVal,xTest] = partitionData(x,0.5,0.1,'testData',true);
 [tTrain,tVal,tTest] = partitionData(t,0.5,0.1,'testData',true);
+
+% trim warmup data
+xTrain = xTrain(3000:end);
+tTrain = tTrain(3000:end);
+
 plotData(tTrain,xTrain,tVal,xVal);
 
 %% Train HAVOK-SINDy Model
 
 % hyperparameters
-stackmax = 40;
-rmax = 11;
-polyDegree = 1; % no support for >1 degrees
-degOfSparsity = 1e-1;
+stackmax = 39;
+rmax = 7;
+polyDegree = 1;
+degOfSparsity = 1e-5;
 
 % construct HAVOK-SINDy model
 [Xi,list,U,S,VTrain,r] = sysidHAVOK( ...
@@ -95,7 +111,6 @@ degOfSparsity = 1e-1;
     'polyDegree',polyDegree ...
     );
 
-% placeholder code (only works for polyDegree=1)
 A = Xi(2:r,1:r-1)';
 B = Xi(end,1:r-1)';
 
@@ -112,40 +127,72 @@ Ad = expM(1:nStates,1:nStates);
 Bd1 = expM(1:nStates,nStates+1+nInputs:end);
 Bd0 = expM(1:nStates,nStates+1:nStates+nInputs) - Bd1;
 
+% check how intermittent forcing behaves for this HAVOK decomposition
+plotvr(tTrain(1:end-stackmax),VTrain(:,r))
+
 %% Train Machine-Learning (ML) model
 
 % hyperparameters
-maxNumSplits = 20;
-treeSize = 20;
-D = 5;
-method = "RandomForestRegressor";
+D = 1;
 
-% training and validation data for x and v
+MLmethod = "BaggedEnsemble";
+EnsembleMethod = "LSBoost";
+maxNumSplits = 50;
+MinLeafSize = 20;
+NumTrees = 20;
+
+% MLmethod = "LSTM";
+% NumLayers = 2;
+% HiddenLayerSizes = [10,10];
+% ActivationFunc = "relu";
+% DropoutProb = 0;
+
+% training and validation data for x,v,vr
 HTrain = HankelMatrix(xTrain,stackmax);
 HVal = HankelMatrix(xVal,stackmax);
 VVal = inv(S)*inv(U)*HVal;
 
-% use previous values of x to predict vr
-vrTrain = {HTrain(1:D:end,1:end-1)',VTrain(2:end,r)};
-vrVal = {HVal(1:D:end,1:end-1)',VVal(r,2:end)'};
+% vr predictors (use previous values of x to predict vr)
+hTrain = HTrain(1:D:end,1:end-1)';
+hVal = HVal(1:D:end,1:end-1)';
 
-% train ML model
+% normalize vr [may be redundant]
+[vrTrain,vrMean,vrSTD] = normalize(VTrain(2:end,r),'zscore');
+vrVal = (VVal(r,2:end)' - vrMean)/vrSTD;
+
+% train ML model (random forest)
 Regressor = trainForcingModel( ...
-    vrTrain,vrVal,method,...
-    "MaxNumSplits",maxNumSplits,...
-    "TreeSize",treeSize ...
+    {hTrain,vrTrain}, ...
+    {hVal,vrVal}, ...
+    MLmethod, ...
+    "MaxNumSplits",maxNumSplits, ...
+    "EnsembleMethod",EnsembleMethod, ...
+    "NumTrees",NumTrees, ...
+    "MinLeafSize",MinLeafSize ...
     );
 
+% train ML model (neural network)
+% Regressor = trainForcingModel( ...
+%     {hTrain,vrTrain}, ...
+%     {hVal,vrVal}, ...
+%     MLmethod, ...
+%     "NumLayers",NumLayers, ...
+%     "HiddenLayerSizes",HiddenLayerSizes, ...
+%     "ActivationFunction",ActivationFunc, ...
+%     "DropoutProbability",DropoutProb, ...
+%     "LearnRate",1e-2 ...
+%     );
+
 % validate ML model (the input dimension is flipped with perceptron)
-vrpTrain = predict(Regressor,vrTrain{1});
-vrpVal = predict(Regressor,vrVal{1});
+vrpTrain = predictML(Regressor,hTrain,MLmethod);
+vrpVal = predictML(Regressor,hVal,MLmethod);
 
 % plot and zoom
 zoomCoords = [90,110;103,105];
 
 plotForcingModel( ...
-    {tTrain(2:end-stackmax),VTrain(2:end,r)}, ...
-    {tVal(2:end-stackmax),VVal(r,2:end)'}, ...
+    {tTrain(2:end-stackmax),vrTrain}, ...
+    {tVal(2:end-stackmax),vrVal}, ...
     {vrpTrain,vrpVal}, ...
     zoomCoords);
 
@@ -159,23 +206,24 @@ vTrain0 = VTrain(1:r-1,1);
 vrVal = VVal(r,:);
 vr = vrVal(1);
 
-% true vr (theoretical HAVOK-SINDy performance)
+% test accuracy of HAVOK-SINDy decomposition by feeding true vr
 % vr = vrVal;
 
 % forecast
 n = length(tVal)-stackmax-1;
 v = vVal0;
 US = U(:,1:r-1)*S(1:r-1,1:r-1);
-for i = 1:n
+for i = 1:2000
 
     h = US*v(:,i);
 
-    vr(i+1) = predict(Regressor,h(1:D:end)');
+    vr(i+1) = predictML(Regressor,h(1:D:end)',MLmethod);
+    vr(i+1) = vr(i+1)*vrSTD + vrMean;
 
     v(:,i+1) = Ad*v(:,i) + Bd0*vr(i) + Bd1*vr(i+1);
 
     if mod(i,100)==0 || i==n
-        disp(i+"/"+n)
+        disp("step: "+i+"/"+n)
     end
 end
 

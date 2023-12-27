@@ -8,15 +8,12 @@ function [U,S,V] = HankelSVD(H)
    
 %   Copyright 2023 Elise Jonsson
 
-% assign H to GPU if large enough
-if numel(H) > 1e6 & canUseGPU
+if numel(H) > 1e7 & canUseGPU
     H = gpuArray(H);
 end
 
-% take singular value decomposition
 [U,S,V] = svd(H,'econ');
 
-% retrieve GPU arrays
 [U,S,V] = gather(U,S,V);
 
 end

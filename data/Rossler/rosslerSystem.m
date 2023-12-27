@@ -9,12 +9,11 @@ function dxdt = rosslerSystem(t,x,beta)
    
 %   Copyright 2023 Elise Jonsson
 
-% default parameter values (chaotic conditions)
 if nargin < 3
+    % default parameter values (chaotic conditions)
     beta = [0.1,0.1,14]';
 end
 
-% model equations
 dxdt = [
     -x(2) - x(3);
 

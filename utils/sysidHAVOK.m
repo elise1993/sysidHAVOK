@@ -24,20 +24,28 @@ function [Xi,list,U,S,V,r] = sysidHAVOK(x,t,stackmax,opt)
 % 
 %   polyDegree - maximum polynomial degree allowed in SINDy-model. For
 %   example, polyDegree=2 constructs a model of dxdt,dydt,dzdt using the 
-%   polynomials: {1, x, y, z, x^2, x^2, z^2, xy, xz, yz}
+%   polynomials: {1, x, y, z, x^2, x^2, z^2, xy, xz, yz} [Only polyDegree=1
+%   supported at this time]
 % 
 
 %   Copyright 2023 Elise Jonsson
 
-% specify optional input arguments
 arguments
-    x (:,1) {mustBeNumeric,mustBeReal}
-    t (:,1) {mustBeNumeric,mustBeReal,miscFunctions.mustBeEqualLength(t,x)}
-    stackmax (1,1) {mustBeNumeric,mustBeReal,mustBePositive}
-    opt.rmax (1,1) {mustBeNumeric,mustBeReal,mustBePositive}
-    opt.r (1,1) {mustBeNumeric,mustBeReal,mustBePositive}
-    opt.degOfSparsity (1,1) {mustBeNumeric,mustBeReal} = 0
-    opt.polyDegree (1,1) {mustBePositive,mustBeLessThanOrEqual(opt.polyDegree,3)} = 1
+    x (:,1) {mustBeReal}
+    
+    t (:,1) {mustBeReal,miscFunctions.mustBeEqualLength(t,x)}
+    
+    stackmax (1,1) {mustBeInteger,mustBePositive}
+
+    opt.rmax (1,1) {mustBeInteger,mustBePositive}
+
+    opt.r (1,1) {mustBeInteger,mustBePositive}
+
+    opt.degOfSparsity (1,1) {mustBeNumeric,mustBeReal, ...
+        mustBeGreaterThanOrEqual(opt.degOfSparsity,0)} = 0
+
+    opt.polyDegree (1,1) {mustBePositive,mustBeInteger, ...
+        mustBeLessThanOrEqual(opt.polyDegree,1)} = 1
 end
 
 % if unspecified, set rmax to its maximum possible value
@@ -45,16 +53,17 @@ if ~isfield(opt,'rmax')
     opt.rmax = stackmax;
 end
 
-% construct Hankel matrix and apply singular value decomposition
+% construct Hankel matrix and apply Singular Value Decomposition
 H = HankelMatrix(x,stackmax);
 [U,S,V] = HankelSVD(H);
 
-% identify the optimal threshold of singular values
+% identify the optimal hard threshold of singular values
 singularVals = diag(S);
 aspectRatio = size(H,1) / size(H,2);
 
 % unless specified, identify optimal hard thresholding of singular values
-% based on Gavish & Donoho (2014) using MATLAB code by github/bwbrunton:
+% based on Gavish & Donoho (2014) and retrieve the required files from 
+% github/bwbrunton if unavailable
 if isfield(opt,'r')
     r = opt.r;
 else
@@ -69,7 +78,7 @@ else
     r = min(opt.rmax,r);
 end
 
-% compute derivative using 4th order central difference
+% compute derivative
 dVdt = derivativeCentralDiff4(V(:,1:r),t);
 
 % retrieve SINDy files from github/dynamicslab if unavailable
@@ -82,15 +91,22 @@ for i = 1:length(files)
     end
 end
 
-% perform SINDy
-Theta = poolData(V(3:end-3,1:r),r,opt.polyDegree);
-Xi = sparsifyDynamics(Theta,dVdt,opt.degOfSparsity,r);
+% assign variabless to GPU if large enough
+if numel(V) > 1e7 & canUseGPU
+    V = gpuArray(V);
+    dVdt = gpuArray(dVdt);
+end
+
+if opt.degOfSparsity > 0
+    % perform SINDy
+    Theta = poolData(V(3:end-3,1:r),r,opt.polyDegree);
+    Xi = sparsifyDynamics(Theta,dVdt,opt.degOfSparsity,r);
+else
+    % perform least-squares
+    Xi = V(3:end-3,1:r)\dVdt;
+    Xi = [zeros(1,r);Xi];
+end
+
 list = poolDataLIST(cellstr("v"+(1:r)),Xi,r,opt.polyDegree);
 
-% perform least-squares
-% Xi = V(3:end-3,1:r)\dVdt;
-% list = 1;
-
-
-
-
+Xi = gather(Xi);

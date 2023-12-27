@@ -4,7 +4,9 @@ function x = recoverState(V,U,S,r,method)
 %
 %    x = recoverState(V,U,S,r,method) recovers the original state x from
 %    the variables V in the delay coordinates U*S with truncation r. To do
-%    this, a Hankel matrix H is reconstructed based on V and U*S.
+%    this, a Hankel matrix H is reconstructed based on V and U*S. If V
+%    exceeds a certain size, the variables are assigned to the GPU where
+%    the matrix product is faster.
 %
 %    method='cross-diagonal': To obtain x, cross-diagonal averages of H
 %    are taken. While this method is more accurate than simply using the
@@ -29,6 +31,12 @@ arguments
     method {mustBeMember(method,{'edges','cross-diagonal'})} = 'cross-diagonal'
 end
 
+if numel(V) > 1e7 & canUseGPU
+    V = gpuArray(V);
+    U = gpuArray(U);
+    S = gpuArray(S);
+end
+
 H = U(1:r-1,1:r-1)*S(1:r-1,1:r-1)*V';
 
 switch method
@@ -41,5 +49,5 @@ switch method
         x = mean(x,'omitnan')';
 end
 
-x = x(1:length(V));
+x = gather(x(1:length(V)));
 

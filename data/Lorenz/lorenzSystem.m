@@ -9,12 +9,11 @@ function dxdt = lorenzSystem(t,x,beta)
 
 %   Copyright 2023 Elise Jonsson
 
-% default parameter values (chaotic conditions)
 if nargin < 3
+    % default parameter values (chaotic conditions)
     beta = [10, 28, 8/3]';
 end
 
-% model equations
 dxdt = [
     beta(1) * (x(2) - x(1));
 

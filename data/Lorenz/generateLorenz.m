@@ -4,7 +4,8 @@ function [t,x] = generateLorenz(opt)
 %    dxdt = generateLorenz(opt) simulates the Lorenz system of equations 
 %    for the specified window of time t with parameters specified by beta
 %    and initial conditions x0. If t, beta or x0 are unspecified, default
-%    values are used.
+%    values are used. The system of equations is solved using the
+%    Runge-Kutta 4,5 Scheme (ode45).
 %
    
 %   Copyright 2023 Elise Jonsson
@@ -16,7 +17,6 @@ arguments
     opt.beta (3,1) = [10, 28, 8/3]'
 end
 
-% solve the Lorenz system using the RKF45 scheme:
 tolerances = odeset('RelTol',1e-12,'AbsTol',1e-12*ones(1,3));
 
 [t,x] = ode45( ...
