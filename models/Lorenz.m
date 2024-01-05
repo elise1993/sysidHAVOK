@@ -1,7 +1,7 @@
-function dxdt = lorenzSystem(t,x,beta)
-% lorenzSystem Model of the Lorenz system
+function dxdt = Lorenz(t,x,beta)
+%Lorenz Model of the Lorenz system
 %
-%    dxdt = lorenzSystem(t,x,beta) is a function variable for the Lorenz
+%    dxdt = Lorenz(t,x,beta) is a function variable for the Lorenz
 %    system of equations for the set of parameters specified by beta.
 %    If the beta parameters are unspecified, the default values for
 %    chaotic conditions beta=[10,28,8/3] are used.

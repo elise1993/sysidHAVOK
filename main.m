@@ -43,8 +43,7 @@
 % MLmethod - specify which type of model is trained on the forcing term vr.
 % The user may specify Random Forest Regression (RFR), Regression Trees,
 % and various Neural Networks; Multilayer Perceptrons (MLPs), Long-Short
-% Term Memory (LSTM) models, etc. Note: Some of these methods are sensitive
-% to outliers.
+% Term Memory (LSTM) models, etc.
 % 
 % treeSize/maxNumSplits - specifies properties of the ML method. In this
 % case the number of ensembled trees and number of splits in those trees.
@@ -63,8 +62,7 @@ mkdir("./downloaded");
 addpath('./utils','./plotting',genpath('./data/'),'./downloaded');
 
 % generate nonlinear data
-[t,x] = generateLorenz();  % Lorenz system
-% [t,x] = generateRossler(); % Rossler system
+[t,x] = generateData("Lorenz");
 x = x(:,1);
 
 % interpolate
@@ -90,8 +88,8 @@ x = fillmissing(x,'makima');
 [tTrain,tVal,tTest] = partitionData(t,0.5,0.1,'testData',true);
 
 % trim warmup data
-xTrain = xTrain(3000:end);
-tTrain = tTrain(3000:end);
+% xTrain = xTrain(3000:end);
+% tTrain = tTrain(3000:end);
 
 plotData(tTrain,xTrain,tVal,xVal);
 
@@ -101,7 +99,7 @@ plotData(tTrain,xTrain,tVal,xVal);
 stackmax = 39;
 rmax = 7;
 polyDegree = 1;
-degOfSparsity = 1e-1;
+degOfSparsity = 1e-3;
 
 % construct HAVOK-SINDy model
 [Xi,list,U,S,VTrain,r] = sysidHAVOK( ...
@@ -217,7 +215,7 @@ vr = vrVal(1);
 n = length(tVal)-stackmax-1;
 v = vVal0;
 US = U(:,1:r-1)*S(1:r-1,1:r-1);
-for i = 1:2000
+for i = 1:n
 
     h = US*v(:,i);
 
