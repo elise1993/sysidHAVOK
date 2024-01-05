@@ -48,6 +48,8 @@ arguments
         mustBeLessThanOrEqual(opt.polyDegree,1)} = 1
 end
 
+disp("Training HAVOK-SINDy model...")
+
 % if unspecified, set rmax to its maximum possible value
 if ~isfield(opt,'rmax')
     opt.rmax = stackmax;

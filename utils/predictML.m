@@ -1,9 +1,9 @@
 function y = predictML(Regressor,x,method)
 %predictML Make prediction using specified Regressor
 %
-%    Because SeriesNetwork, TreeBagger, and fitensemble objects require
-%    different input dimensions when using the predict.m function, this
-%    function simply transposes the input depending on which method is
+%    Because SeriesNetwork, TreeBagger, and RegressionEnsemble objects
+%    require different input dimensions when using the predict.m function,
+%    this function simply transposes the input depending on which method is
 %    used.
 %
 
@@ -16,12 +16,12 @@ arguments
 
     x (:,:) {mustBeReal}
 
-    method (1,1) {mustBeMember(method,["TreeBagger","BaggedEnsemble",...
+    method (1,1) {mustBeMember(method,["Bag","Boost","RFR","SVR",...
         "MLP","LSTM"])}
 end
 
 switch method
-    case {"TreeBagger","BaggedEnsemble"}
+    case {"Bag","LSBoost","RFR","SVR"}
         y = predict(Regressor,x);
 
     case {"MLP","LSTM"}
