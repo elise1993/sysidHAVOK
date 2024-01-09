@@ -2,12 +2,22 @@
 % This code takes some data, interpolates it, partitions it into
 % training/validation/testing sets, and finds a Koopman-based linear
 % representation of the system in delay coordinates using HAVOK analysis
-% and SINDy. This code requires the specification of the following
-% parameters:
+% and SINDy. It then trains a Machine Learning (ML) method on the 
+% intermittent forcing term of HAVOK and uses this forcing model to 
+% produce a forecast over the validation period. This code requires the
+% specification of the following parameters:
 % 
 % x,t,x0 - Single-variable data, x, from a nonlinear chaotic system sampled
 % at times t, with initial condition x0. Example data are generated from
-% the Lorenz- and Van der Pol systems.
+% the following systems:
+% 
+%       - Lorenz
+%       - Rossler
+%       - VanderPol
+%       - Duffing
+%       - DoublePendulum
+%       - MackeyGlass
+%       - MagneticFieldReversal [based on Molina-Cardín et. al. (2021)]
 % 
 % stackmax - number of time(delay)-shifted copies of the data x, which
 % represents the memory of the HAVOK model. Similar to an Auto-Regressive
@@ -41,12 +51,16 @@
 % are truncated in the HAVOK-SINDy algorithm.
 % 
 % MLmethod - specify which type of model is trained on the forcing term vr.
-% The user may specify Random Forest Regression (RFR), Regression Trees,
-% and various Neural Networks; Multilayer Perceptrons (MLPs), Long-Short
-% Term Memory (LSTM) models, etc.
+% The user may specify the following methods, including various ensemble
+% methods and neural networks:
 % 
-% treeSize/maxNumSplits - specifies properties of the ML method. In this
-% case the number of ensembled trees and number of splits in those trees.
+%   - Bagging (Bag)
+%   - Boosting (LSBoost)
+%   - Random Forest Regression (RFR)
+%   - Support Vector Regression (SVR)
+%   - Multilayer Perceptron (MLP)
+%   - Long-Short Term Memory (LSTM)
+%   - Temporal Convolutional Network (TCN) [unfinished]
 % 
 % D - The ML method uses previous values of the data x to predict the next
 % value of vr. The parameter D specifies the spacing between these previous
@@ -56,81 +70,26 @@
 
 %   Copyright 2023 Elise Jonsson
 
-%% Prepare Data
 close all; clear; clc
-mkdir("./downloaded");
-addpath('./utils','./plotting',genpath('./data/'),'./downloaded');
 
-% generate nonlinear data
-[t,x] = generateData("Lorenz");
-x = x(:,1);
+%% Hyperparameters
 
-% interpolate
-tmax = t(end);
-dt = t(2)-t(1);
-dt = 0.1*dt;
-tNew = (dt:dt:tmax)';
-x = interp1(t,x,tNew,"cubic","extrap");
-t = tNew;
-
-% add noise, remove missing values/outliers, and normalize
+% data
+system = "Lorenz";
+tolerance = 1e-12;
+start = 1;
 degOfNoise = 0;
-x = x + degOfNoise*std(x,'omitmissing')*randn(size(x));
+interpMethod = "cubic";
+interpFactor = 0.1;
+outlierMethod = "median";
 
-outliers = find(isoutlier(x));
-x(outliers) = nan;
-x = fillmissing(x,'makima');
-
-% [x,xMean,xSTD] = normalize(x);
-
-% partition into training/validation/test data
-[xTrain,xVal,xTest] = partitionData(x,0.5,0.1,'testData',true);
-[tTrain,tVal,tTest] = partitionData(t,0.5,0.1,'testData',true);
-
-% trim warmup data
-% xTrain = xTrain(3000:end);
-% tTrain = tTrain(3000:end);
-
-plotData(tTrain,xTrain,tVal,xVal);
-
-%% Train HAVOK-SINDy Model
-
-% hyperparameters
+% HAVOK-SINDy model
 stackmax = 39;
 rmax = 7;
 polyDegree = 1;
 degOfSparsity = 1e-3;
 
-% construct HAVOK-SINDy model
-[Xi,list,U,S,VTrain,r] = sysidHAVOK( ...
-    xTrain,tTrain,stackmax, ...
-    'rmax',rmax, ...
-    'degOfSparsity',degOfSparsity, ...
-    'polyDegree',polyDegree ...
-    );
-
-A = Xi(2:r,1:r-1)';
-B = Xi(end,1:r-1)';
-
-% construct forcing-augmented system
-nStates = size(A,1);
-nInputs = size(B,2);
-
-M = [[A*dt , B*dt , zeros(nStates,nInputs)];
-     [zeros(nInputs,nStates + nInputs), eye(nInputs)];
-     [zeros(nInputs, nStates+2*nInputs)]];
-
-expM = expm(M);
-Ad = expM(1:nStates,1:nStates);
-Bd1 = expM(1:nStates,nStates+1+nInputs:end);
-Bd0 = expM(1:nStates,nStates+1:nStates+nInputs) - Bd1;
-
-% check how intermittent forcing behaves for this HAVOK decomposition
-plotvr(tTrain(1:end-stackmax),VTrain(:,r))
-
-%% Train Machine-Learning (ML) model
-
-% hyperparameters
+% ML model
 D = 5;
 MLmethod = "RFR";
 
@@ -149,6 +108,79 @@ HiddenLayerSizes = [10,10];
 ActivationFunc = "relu";
 DropoutProb = 0;
 
+% forecast
+nVal = 2e4;
+nSteps = nVal-stackmax-1;
+SimulateForcing = false;
+
+%% Prepare Data
+mkdir("./downloaded");
+addpath('./utils','./plotting','./models','./downloaded',genpath('./data/'));
+
+% generate nonlinear data
+[t,x] = generateData(system,"Tolerance",tolerance);
+
+% choose variable of interest
+x = x(:,1);
+
+% interpolate
+tmax = t(end);
+dt = t(2)-t(1);
+dt = interpFactor*dt;
+tNew = (dt:dt:tmax)';
+x = interp1(t,x,tNew,interpMethod,"extrap");
+t = tNew;
+
+% add noise, remove missing values/outliers, and normalize
+x = x + degOfNoise*std(x,'omitmissing')*randn(size(x));
+
+outliers = find(isoutlier(x,outlierMethod));
+x(outliers) = nan;
+x = fillmissing(x,'makima');
+
+% [x,xMean,xSTD] = normalize(x);
+
+% partition into training/validation/test data
+[xTrain,xVal,xTest] = partitionData(x,0.5,0.1,'testData',true);
+[tTrain,tVal,tTest] = partitionData(t,0.5,0.1,'testData',true);
+
+% trim warmup data
+xTrain = xTrain(start:end);
+tTrain = tTrain(start:end);
+
+plotData(tTrain,xTrain,tVal,xVal);
+
+%% Train HAVOK-SINDy Model
+
+% construct HAVOK-SINDy model
+[Xi,list,U,S,VTrain,r] = sysidHAVOK( ...
+    xTrain,tTrain,stackmax, ...
+    'rmax',rmax, ...
+    'degOfSparsity',degOfSparsity, ...
+    'polyDegree',polyDegree ...
+    );
+
+% check how intermittent forcing behaves for this HAVOK decomposition
+plotvr(tTrain(1:end-stackmax),VTrain(:,r))
+
+% construct forcing-augmented system
+A = Xi(2:r,1:r-1)';
+B = Xi(end,1:r-1)';
+
+nStates = size(A,1);
+nInputs = size(B,2);
+
+M = [[A*dt , B*dt , zeros(nStates,nInputs)];
+     [zeros(nInputs,nStates + nInputs), eye(nInputs)];
+     [zeros(nInputs, nStates+2*nInputs)]];
+
+expM = expm(M);
+Ad = expM(1:nStates,1:nStates);
+Bd1 = expM(1:nStates,nStates+1+nInputs:end);
+Bd0 = expM(1:nStates,nStates+1:nStates+nInputs) - Bd1;
+
+%% Train Machine-Learning (ML) model
+
 % training and validation data for x,v,vr
 HTrain = HankelMatrix(xTrain,stackmax);
 HVal = HankelMatrix(xVal,stackmax);
@@ -158,7 +190,7 @@ VVal = inv(S)*inv(U)*HVal;
 hTrain = HTrain(1:D:end,1:end-1)';
 hVal = HVal(1:D:end,1:end-1)';
 
-% normalize vr [may be redundant]
+% normalize vr
 [vrTrain,vrMean,vrSTD] = normalize(VTrain(2:end,r),'zscore');
 vrVal = (VVal(r,2:end)' - vrMean)/vrSTD;
 
@@ -202,51 +234,30 @@ plotHistogram(VTrain(:,r));
 
 %% Forecast and Validate Model
 
-% get initial conditions for training/validation data in delay coordinates
-vVal0 = VVal(1:r-1,1);
-vTrain0 = VTrain(1:r-1,1);
-vrVal = VVal(r,:);
-vr = vrVal(1);
-
-% test accuracy of HAVOK-SINDy decomposition by feeding true vr
-% vr = vrVal;
-
-% forecast
-n = length(tVal)-stackmax-1;
-v = vVal0;
-US = U(:,1:r-1)*S(1:r-1,1:r-1);
-for i = 1:n
-
-    h = US*v(:,i);
-
-    vr(i+1) = predictML(Regressor,h(1:D:end)',MLmethod);
-    vr(i+1) = vr(i+1)*vrSTD + vrMean;
-
-    v(:,i+1) = Ad*v(:,i) + Bd0*vr(i) + Bd1*vr(i+1);
-
-    if mod(i,100)==0 || i==n
-        disp("step: "+i+"/"+n)
-    end
-end
+[vSimVal,vrSimVal] = forecastHAVOK( ...
+    VVal,U,S,Ad,Bd0,Bd1,stackmax,r, ...
+    Regressor,vrMean,vrSTD, ...
+    nSteps, ...
+    'SimulateForcing',SimulateForcing ...
+    );
 
 % recover x from v
-xSimVal = recoverState(v',U,S,r,'cross-diagonal');
-vrSimVal = vr';
-vSimVal = v;
+xSimVal = recoverState(vSimVal',U,S,r,'cross-diagonal');
+vrSimVal = vrSimVal';
+
+tTarget = tVal(1:length(xSimVal));
+xTarget = xVal(1:length(xSimVal));
+vrTarget = vrVal(1:length(vrSimVal));
 
 % model performance
-xTarget = xVal(1:length(xSimVal));
-RMSE = rmse(xSimVal,xTarget);
-NMSE = miscFunctions.nmse(xSimVal,xTarget);
-[R,pvalue] = corr(xSimVal,xTarget,'type','Pearson');
-R2 = R^2;
+[RMSE,NMSE,R2,pvalue_R2] = forecastSkill(xTarget,xSimVal);
 
 % plot
 plotForecast( ...
-    tVal(1:length(xSimVal)), ...
-    xVal(1:length(xSimVal)), ...
+    tTarget, ...
+    xTarget, ...
     xSimVal, ...
-    vrVal(1:length(vrSimVal)),...
+    vrTarget,...
     vrSimVal ...
     );
 
