@@ -17,9 +17,12 @@
 %       - Duffing
 %       - DoublePendulum
 %       - MackeyGlass
-%       - MagneticFieldReversal [based on Molina-Cardín et. al. (2021)]
+%       - MagneticFieldReversal*
 % 
-% stackmax - number of time(delay)-shifted copies of the data x, which
+%       * Based on Molina-Cardín et. al. (2021) "Simple stochastic model 
+%         for geomagnetic excursions and reversals ...", PNAS
+% 
+% stackmax - number of time-shifted (delayed) copies of the data x, which
 % represents the memory of the HAVOK model. Similar to an Auto-Regressive
 % model, A longer memory allows for longer dependencies, but increases the
 % complexity and computational intensity of the model.
@@ -57,10 +60,15 @@
 %   - Bagging (Bag)
 %   - Boosting (LSBoost)
 %   - Random Forest Regression (RFR)
+%   - C++ Optimized Random Forest Regression (RFR-MEX)*
 %   - Support Vector Regression (SVR)
 %   - Multilayer Perceptron (MLP)
 %   - Long-Short Term Memory (LSTM)
 %   - Temporal Convolutional Network (TCN) [unfinished]
+% 
+%       * [by Leo Breiman et al. from the R-source by Andy Liaw et al.
+%         http://cran.r-project.org/web/packages/randomForest/index.html
+%         Ported to MATLAB by Abhishek Jaiantilal]
 % 
 % D - The ML method uses previous values of the data x to predict the next
 % value of vr. The parameter D specifies the spacing between these previous
@@ -75,29 +83,33 @@ close all; clear; clc
 %% Hyperparameters
 
 % data
-system = "Lorenz";
-tolerance = 1e-12;
+SystemName = "Lorenz";
+Tolerance = 1e-12;
 start = 1;
-degOfNoise = 0;
-interpMethod = "cubic";
-interpFactor = 0.1;
-outlierMethod = "median";
+DegreeOfNoise = 0;
+InterpolationMethod = "cubic";
+InterpolationFactor = 0.1;
+OutlierMethod = "median";
+FillMethod = "makima";
+Normalize = false;
+TrainFactor = 0.5;
+ValFactor = 0.1;
 
 % HAVOK-SINDy model
 stackmax = 39;
 rmax = 7;
-polyDegree = 1;
-degOfSparsity = 1e-3;
+PolynomialDegree = 1;
+DegreeOfSparsity = 0;
 
 % ML model
+MLmethod = "RFR-MEX";
 D = 5;
-MLmethod = "RFR";
 
 % ensemble methods (Bag, LSBoost, RFR)
-maxNumSplits = 50000;
-MinLeafSize = 27;
+MaxNumSplits = 50000;
 NumTrees = 20;
-NumFeaturesToSample = 8;
+MinLeafSize = 27;
+NumFeaturesToSample = 2;
 
 % support vector regression (SVR)
 KernelFunction = "gaussian";
@@ -105,44 +117,39 @@ KernelFunction = "gaussian";
 % neural networks (MLP, LSTM, TCN)
 NumLayers = 2;
 HiddenLayerSizes = [10,10];
-ActivationFunc = "relu";
-DropoutProb = 0;
+ActivationFunction = "relu";
+DropoutProbability = 0;
+LearnRate = 1e-2;
 
 % forecast
-nVal = 2e4;
-nSteps = nVal-stackmax-1;
-SimulateForcing = false;
+nSteps = 2e4;
+multiStepSize = 1000;
+SimulateForcing = true;
 
 %% Prepare Data
 mkdir("./downloaded");
 addpath('./utils','./plotting','./models','./downloaded',genpath('./data/'));
 
 % generate nonlinear data
-[t,x] = generateData(system,"Tolerance",tolerance);
+[t,x] = generateData(SystemName,"Tolerance",Tolerance);
 
-% choose variable of interest
+% process data
 x = x(:,1);
-
-% interpolate
-tmax = t(end);
-dt = t(2)-t(1);
-dt = interpFactor*dt;
-tNew = (dt:dt:tmax)';
-x = interp1(t,x,tNew,interpMethod,"extrap");
-t = tNew;
-
-% add noise, remove missing values/outliers, and normalize
-x = x + degOfNoise*std(x,'omitmissing')*randn(size(x));
-
-outliers = find(isoutlier(x,outlierMethod));
-x(outliers) = nan;
-x = fillmissing(x,'makima');
-
-% [x,xMean,xSTD] = normalize(x);
+[t,x,dt] = processData(t,x, ...
+    'DegreeOfNoise',DegreeOfNoise, ...
+    'InterpolationMethod',InterpolationMethod, ...
+    'InterpolationFactor',InterpolationFactor, ...
+    'OutlierMethod',OutlierMethod, ...
+    'FillMethod',FillMethod, ...
+    'Normalize',Normalize ...
+    );
 
 % partition into training/validation/test data
-[xTrain,xVal,xTest] = partitionData(x,0.5,0.1,'testData',true);
-[tTrain,tVal,tTest] = partitionData(t,0.5,0.1,'testData',true);
+[xTrain,xVal,xTest] = partitionData(x,...
+    TrainFactor,ValFactor,'testData',true);
+
+[tTrain,tVal,tTest] = partitionData(t,...
+    TrainFactor,ValFactor,'testData',true);
 
 % trim warmup data
 xTrain = xTrain(start:end);
@@ -156,8 +163,8 @@ plotData(tTrain,xTrain,tVal,xVal);
 [Xi,list,U,S,VTrain,r] = sysidHAVOK( ...
     xTrain,tTrain,stackmax, ...
     'rmax',rmax, ...
-    'degOfSparsity',degOfSparsity, ...
-    'polyDegree',polyDegree ...
+    'DegreeOfSparsity',DegreeOfSparsity, ...
+    'PolynomialDegree',PolynomialDegree ...
     );
 
 % check how intermittent forcing behaves for this HAVOK decomposition
@@ -190,9 +197,9 @@ VVal = inv(S)*inv(U)*HVal;
 hTrain = HTrain(1:D:end,1:end-1)';
 hVal = HVal(1:D:end,1:end-1)';
 
-% normalize vr
-[vrTrain,vrMean,vrSTD] = normalize(VTrain(2:end,r),'zscore');
-vrVal = (VVal(r,2:end)' - vrMean)/vrSTD;
+% vr
+vrTrain = VTrain(2:end,r);
+vrVal = VVal(r,2:end)';
 
 % train ML model
 Regressor = trainForcingModel( ...
@@ -201,23 +208,23 @@ Regressor = trainForcingModel( ...
     MLmethod, ...
     ...
     ... % for ensemble methods
-    "MaxNumSplits",maxNumSplits, ...
+    "MaxNumSplits",MaxNumSplits, ...
     "NumTrees",NumTrees, ...
     "MinLeafSize",MinLeafSize, ...
     "NumFeaturesToSample",NumFeaturesToSample, ...
     ...
     ... % for support vector regression
-    "KernelFunction",KernelFunction, ....
+    "KernelFunction",KernelFunction, ...
     ...
     ... % for neural networks
     "NumLayers",NumLayers, ...
     "HiddenLayerSizes",HiddenLayerSizes, ...
-    "ActivationFunction",ActivationFunc, ...
-    "DropoutProbability",DropoutProb, ...
-    "LearnRate",1e-2 ...
+    "ActivationFunction",ActivationFunction, ...
+    "DropoutProbability",DropoutProbability, ...
+    "LearnRate",LearnRate ...
     );
 
-% validate ML model (the input dimension is flipped with perceptron)
+% validate ML model
 vrpTrain = predictML(Regressor,hTrain,MLmethod);
 vrpVal = predictML(Regressor,hVal,MLmethod);
 
@@ -228,7 +235,9 @@ plotForcingModel( ...
     {tTrain(2:end-stackmax),vrTrain}, ...
     {tVal(2:end-stackmax),vrVal}, ...
     {vrpTrain,vrpVal}, ...
-    zoomCoords);
+    zoomCoords, ...
+    MLmethod ...
+    );
 
 plotHistogram(VTrain(:,r));
 
@@ -236,8 +245,8 @@ plotHistogram(VTrain(:,r));
 
 [vSimVal,vrSimVal] = forecastHAVOK( ...
     VVal,U,S,Ad,Bd0,Bd1,stackmax,r, ...
-    Regressor,vrMean,vrSTD, ...
-    nSteps, ...
+    Regressor,MLmethod,D, ...
+    nSteps,multiStepSize, ...
     'SimulateForcing',SimulateForcing ...
     );
 
@@ -258,7 +267,8 @@ plotForecast( ...
     xTarget, ...
     xSimVal, ...
     vrTarget,...
-    vrSimVal ...
+    vrSimVal, ...
+    multiStepSize ...
     );
 
 plotAttractor( ...

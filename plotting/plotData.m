@@ -24,9 +24,10 @@ for i=1:nVars
     subplot(nVars,1,i); hold on
     
     % shaded areas
-    range = [min(x(:,i))-std(x(:,i)),max(x(:,i))+std(x(:,i))];
-    areaRangeTrain = {[t(1),tVal(1),tVal(1),t(1)],[range(1),range(1),range(2),range(2)]};
-    areaRangeVal = {[tVal(1),tVal(end),tVal(end),tVal(1)],[range(1),range(1),range(2),range(2)]};
+    tRange = [t(1)-(t(end)-t(1))*0.02,t(end)+(t(end)-t(1))*0.02];
+    xRange = [min(x(:,i))-std(x(:,i)),max(x(:,i))+std(x(:,i))];
+    areaRangeTrain = {[tRange(1),tVal(1),tVal(1),tRange(1)],[xRange(1),xRange(1),xRange(2),xRange(2)]};
+    areaRangeVal = {[tVal(1),tRange(2),tRange(2),tVal(1)],[xRange(1),xRange(1),xRange(2),xRange(2)]};
     patch(areaRangeTrain{1},areaRangeTrain{2},'g','FaceAlpha',0.03,'EdgeColor','none')
     patch(areaRangeVal{1},areaRangeVal{2},'r','FaceAlpha',0.03,'EdgeColor','none')
 
@@ -36,11 +37,12 @@ for i=1:nVars
 
     % plots
     plot([tTrain;tVal],[xTrain(:,i);xVal(:,i)],linewidth=2,color="#0072BD")
-    ylim(range)
     grid on
     scatter(t(1),xTrain(1,i),'ow',linewidth=2)
     scatter(tVal(1),xVal(1,i),'ow',linewidth=2)
     set(gca,'fontsize',20,'linewidth',2)
+    ylim(xRange)
+    xlim(tRange)
 
     ylabel("x_"+num2str(i))
     if i<nVars

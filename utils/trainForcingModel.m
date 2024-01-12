@@ -1,5 +1,5 @@
 function Regressor = trainForcingModel(vrTrain,vrVal,method,opt)
-%trainForcingModel Train Machine Learning model [unfinished]
+%trainForcingModel Train Machine Learning model [Work in Progress]
 %
 %    Regressor = trainForcingModel(vrTrain,vrVal,method,opt) trains a
 %    Machine Learning (ML) model, using the columns of vrTrain as
@@ -10,10 +10,15 @@ function Regressor = trainForcingModel(vrTrain,vrVal,method,opt)
 %       - Bootstrap Aggregation (Bag)
 %       - Boosting (LSBoost)
 %       - Random Forest Regression (RFR)
+%       - C++ Optimized Random Forest Regression (RFR-MEX)*
 %       - Support Vector Regression (SVR)
 %       - Multilayer Perceptron (MLP)
 %       - Long Short-Term Memory (LSTM)
 %       - Temoral Convolutional Network (TCN) [unfinished]
+% 
+%       * [by Leo Breiman et al. from the R-source by Andy Liaw et al.
+%         http://cran.r-project.org/web/packages/randomForest/index.html
+%         Ported to MATLAB by Abhishek Jaiantilal]
 % 
 %    The model output can be used with the function predictML.m to
 %    make predictions. Optional arguments are provided to specify the model
@@ -34,10 +39,11 @@ arguments
         "Bag",...
         "LSBoost",...
         "RFR", ...
+        "RFR-MEX", ...
         "SVR", ...
         "MLP", ...
         "LSTM" ...
-        ])} = "RFR"
+        ])} = "RFR-MEX"
 
     opt.MaxNumSplits (1,1) {mustBeInteger,mustBePositive} = 100;
 
@@ -115,6 +121,24 @@ switch method
             'InBagFraction',1/opt.NumTrees, ...
             'NumPrint',1 ...
             );
+
+    case "RFR-MEX"
+
+        mkdir("downloaded\RF_Reg_C");
+        addpath("downloaded\RF_Reg_C\");
+        files = ["regRF_train.m","regRF_predict.m","mexRF_train.mexw64",...
+            "mexRF_train.mexw32","mexRF_predict.mexw64",...
+            "mexRF_predict.mexw32"];
+
+        for i = 1:length(files)
+            if ~exist(files(i),'file')
+                disp(files(i)+" not found in current directory, retrieving...")
+                url = "https://github.com/tingliu/randomforest-matlab/blob/master/RF_Reg_C/";
+                websave("./downloaded/RF_Reg_C/"+files(i),url+files(i)+"?raw=true");
+            end
+        end
+
+        Regressor = regRF_train(vrTrain{1},vrTrain{2},opt.NumTrees,opt.NumFeaturesToSample);
 
     case "SVR"
 

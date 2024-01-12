@@ -41,11 +41,11 @@ arguments
 
     opt.r (1,1) {mustBeInteger,mustBePositive}
 
-    opt.degOfSparsity (1,1) {mustBeNumeric,mustBeReal, ...
-        mustBeGreaterThanOrEqual(opt.degOfSparsity,0)} = 0
+    opt.DegreeOfSparsity (1,1) {mustBeNumeric,mustBeReal, ...
+        mustBeGreaterThanOrEqual(opt.DegreeOfSparsity,0)} = 0
 
-    opt.polyDegree (1,1) {mustBePositive,mustBeInteger, ...
-        mustBeLessThanOrEqual(opt.polyDegree,1)} = 1
+    opt.PolynomialDegree (1,1) {mustBePositive,mustBeInteger, ...
+        mustBeLessThanOrEqual(opt.PolynomialDegree,1)} = 1
 end
 
 disp("Training HAVOK-SINDy model...")
@@ -99,16 +99,16 @@ if numel(V) > 1e7 & canUseGPU
     dVdt = gpuArray(dVdt);
 end
 
-if opt.degOfSparsity > 0
+if opt.DegreeOfSparsity > 0
     % perform SINDy
-    Theta = poolData(V(3:end-3,1:r),r,opt.polyDegree);
-    Xi = sparsifyDynamics(Theta,dVdt,opt.degOfSparsity,r);
+    Theta = poolData(V(3:end-3,1:r),r,opt.PolynomialDegree);
+    Xi = sparsifyDynamics(Theta,dVdt,opt.DegreeOfSparsity,r);
 else
     % perform least-squares
     Xi = V(3:end-3,1:r)\dVdt;
     Xi = [zeros(1,r);Xi];
 end
 
-list = poolDataLIST(cellstr("v"+(1:r)),Xi,r,opt.polyDegree);
+list = poolDataLIST(cellstr("v"+(1:r)),Xi,r,opt.PolynomialDegree);
 
-Xi = gather(Xi);
+[Xi,U,S,V] = gather(Xi,U,S,V);

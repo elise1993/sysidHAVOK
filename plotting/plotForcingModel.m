@@ -1,4 +1,4 @@
-function h = plotForcingModel(Train,Val,Predictions,zoomCoords)
+function h = plotForcingModel(Train,Val,Predictions,zoomCoords,MLmethod)
 %plotForcingModel Plot forcing model
 %
 %    h = plotForcingModel(Train,Val,Predictions,zoomCoords) plots the
@@ -13,6 +13,7 @@ arguments
     Val (:,:)
     Predictions (:,:)
     zoomCoords (2,2)
+    MLmethod (1,1)
 end
 
 tTrain = Train{1};
@@ -26,6 +27,23 @@ t = [tTrain;tVal];
 
 xSimTrain = Predictions{1};
 xSimVal = Predictions{2};
+
+switch MLmethod
+    case "Bag"
+        MLtitle = "Bootstrap Aggregation";
+    case "LSBoost"
+        MLtitle = "Least-Squares Boosting";
+    case {"RFR","RFR-MEX"}
+        MLtitle = "Random Forest Regressor";
+    case "SVR"
+        MLtitle = "Support Vector Regression";
+    case "MLP"
+        MLtitle = "Multilayer Perceptron";
+    case "LSTM"
+        MLtitle = "Long Short-Term Memory Network";
+    case "TCN"
+        MLtitle = "Temporal Convolutional Network";
+end
 
 % plot
 h = figure;
@@ -49,7 +67,7 @@ for i=1:2
     ylim(range)
 
     if i==1
-        title("Random Forest Regressor (Open-Loop Forecasting Performance)")
+        title(MLtitle+" (Single-Step Prediction Performance)")
         xlabel('')
         xlim([zoomCoords(1),zoomCoords(3)])
         text(0.22,.92,"Training",'Units','normalized','fontsize',18);

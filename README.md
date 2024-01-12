@@ -46,7 +46,7 @@ a) x,t,x0 - Single-variable data, x, from a nonlinear chaotic system sampled at 
 - Duffing
 - DoublePendulum
 - MackeyGlass
-- MagneticFieldReversal [based on Molina-Cardín et. al. (2021)]
+- MagneticFieldReversal (Molina-Cardín et. al., 2021)
 
 ![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/5775e9f3-4e33-423d-9901-93218edeea81)
 
@@ -63,6 +63,7 @@ f) MLmethod - specify which type of model is trained on the forcing term vr. The
 - Bagging (Bag)
 - Boosting (LSBoost)
 - Random Forest Regression (RFR)
+- C++ Optimized Random Forest Regression (RFR-MEX) (Jaiantilal, 2010 and others)
 - Support Vector Regression (SVR)
 - Multilayer Perceptron (MLP)
 - Long-Short Term Memory (LSTM)
@@ -70,7 +71,7 @@ f) MLmethod - specify which type of model is trained on the forcing term vr. The
 
 g) D - The ML method uses previous values of the data x to predict the next value of vr. The parameter D specifies the spacing between these previous values. For example, if D = 5, the ML method uses [x(t), x(t-5dt), x(t-10dt), ...] to predict vr(t+dt). The number of x-predictors is limited by the stackmax of the HAVOK model.
 
-![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/6016f621-2501-403f-9032-2c86ab5fba08)
+![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/77f77089-1638-4141-bf22-f2aafff3f192)
 
 ![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/841c9f48-daaa-437b-ac53-acf2c77f9d2a)
 
@@ -116,11 +117,11 @@ These functions trains a ML method on the vr training data and makes predictions
 
 **utils/forecastHAVOK.m, forecastSkill.m**
 
-forecastHAVOK.m forecasts the HAVOK system trained by sysidHAVOK.m for the validation period and forecastSkill.m checks the forecasting skill.
+forecastHAVOK.m performs a multi-step prediction of the HAVOK system trained by sysidHAVOK.m for the validation period, whereas forecastSkill.m checks the forecasting skill. For the Lorenz system, greater than 1000 multi-step predictions severely degrade the performance.
 
-![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/a3fdd849-3ba5-4d55-8692-5e82944031ab)
+![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/fce7964c-717f-4623-a03b-01dca94cc7b0)
 
-![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/807ba089-3ec8-4b4c-b08e-99ac2eadf707)
+![image](https://github.com/elise1993/sysidHAVOK/assets/100414021/08cd7b18-c1a5-4879-95e0-2bf40a9d9038)
 
 ---
 
@@ -166,3 +167,5 @@ Folder with hyperparameters used for the different systems.
 - Yang et. al. (2022), "A Hybrid Method Using HAVOK Analysis and Machine Learning for Predicting Chaotic Time Series", Entropy (MDPI), URL: [https://www.mdpi.com/1099-4300/24/3/408]
 - Mezić (2005), "Spectral properties of dynamical systems, model reduction and decompositions." Nonlinear Dynamics, URL: [https://link.springer.com/article/10.1007/s11071-005-2824-x]
 - Gavish & Donoho (2014) "The Optimal Hard Threshold for Singular Values is 4/√3" , IEEE, URL: [https://ieeexplore.ieee.org/document/6846297]
+- Molina-Cardín et. al. (2021) "Simple stochastic model for geomagnetic excursions and reversals reproduces the temporal asymmetry of the axial dipole moment", PNAS, URL: [https://www.pnas.org/doi/full/10.1073/pnas.2017696118]
+- Jaiantilal (2010) "Random Forest (Regression, Classification and Clustering) implementation for MATLAB (and Standalone)", URL: [https://code.google.com/archive/p/randomforest-matlab/], Ported from Breiman et al. URL: [https://cran.r-project.org/web/packages/randomForest/index.html]

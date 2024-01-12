@@ -13,16 +13,27 @@ classdef miscFunctions
         function mustBeEqualLength(a,b)
             if ~isequal(length(a),length(b))
                 eid = 'Size:notEqual';
-                msg = 'The data matrix (x) is not the same length as the time vector (t)!';
+                msg = 'The arrays, (a) and (b), are not the same length.';
                 error(eid,msg)
             end
         end
 
         % test for monotonicity
-        function mustBeMonotonic(a)
-            if any(diff(a) < 0)
+        function mustBeMonotonic(x)
+            if any(diff(x) < 0)
                 eid = 'Monotonic:false';
-                msg = 'The time array (a) must consist of monotonically increasing values!';
+                msg = 'The array (x) must consist of monotonically increasing values.';
+                error(eid,msg)
+            end
+        end
+
+        % test for equidistant
+        function mustBeEquidistant(x)
+            tol = 1e-6;
+            dx = diff(x);
+            if not(all(ismembertol(dx,dx(1),tol)))
+                eid = 'Equidistant:false';
+                msg = 'The elements of the array (x) are not equidistant.';
                 error(eid,msg)
             end
         end
