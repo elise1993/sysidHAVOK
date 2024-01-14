@@ -29,9 +29,9 @@ classdef miscFunctions
 
         % test for equidistant
         function mustBeEquidistant(x)
-            tol = 1e-6;
+            tol = 1;
             dx = diff(x);
-            if not(all(ismembertol(dx,dx(1),tol)))
+            if not(all(ismembertol(dx,dx(1),tol*dx(1))))
                 eid = 'Equidistant:false';
                 msg = 'The elements of the array (x) are not equidistant.';
                 error(eid,msg)

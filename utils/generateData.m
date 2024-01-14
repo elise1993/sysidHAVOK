@@ -54,7 +54,6 @@ if ~isfield(opt,"x0")
         case {"VanderPol","Duffing"}
             opt.x0 = [1,1]';
         case "DoublePendulum"
-            % opt.x0 = [1.6,0,2.2,0];
             opt.x0 = [pi/2,-0.01,pi/2,-0.005];
         case "MackeyGlass"
             opt.x0 = 1;
@@ -65,10 +64,12 @@ end
 
 if ~isfield(opt,"t")
     switch system
-        case {"Lorenz","Rossler","VanderPol","Duffing","DoublePendulum"}
-            opt.t = 0.01:0.01:200;
+        case {"Lorenz","VanderPol","Duffing","DoublePendulum"}
+            opt.t = 0:0.01:200;
+        case "Rossler"
+            opt.t = 0:0.01:50;
         case "MackeyGlass"
-            opt.t = 0:0.1:500;
+            opt.t = 0:1:500;
         case "MagneticFieldReversal"
             opt.t = 0:1:1e4;
     end

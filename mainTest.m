@@ -82,50 +82,7 @@ close all; clear; clc
 
 %% Hyperparameters
 
-% data
-SystemName = "MagneticFieldReversal";
-Tolerance = 1e-3;
-start = 1;
-DegreeOfNoise = 0;
-InterpolationMethod = "cubic";
-InterpolationFactor = 10;
-OutlierMethod = "median";
-FillMethod = "makima";
-Normalize = false;
-TrainFactor = 0.5;
-ValFactor = 0.1;
-
-% HAVOK-SINDy model
-stackmax = 100;
-rmax = 4;
-PolynomialDegree = 1;
-DegreeOfSparsity = 0;
-
-% ML model
-MLmethod = "RFR-MEX";
-D = 5;
-zoomCoords = [0,5e5;4e5,4.3e5];
-
-% ensemble methods (Bag, LSBoost, RFR)
-MaxNumSplits = 50000;
-NumTrees = 20;
-MinLeafSize = 27;
-NumFeaturesToSample = 2;
-
-% support vector regression (SVR)
-KernelFunction = "gaussian";
-
-% neural networks (MLP, LSTM, TCN)
-NumLayers = 2;
-HiddenLayerSizes = [10,10];
-ActivationFunction = "relu";
-DropoutProbability = 0;
-LearnRate = 1e-2;
-
-% forecast
-nSteps = 2e4;
-multiStepSize = 1000;
-SimulateForcing = true;
+load("tests\HAVOK-SINDy-Lorenz.mat");
 
 %% Prepare Data
 mkdir("./downloaded");
