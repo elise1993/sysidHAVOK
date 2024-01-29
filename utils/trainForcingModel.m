@@ -36,6 +36,7 @@ arguments
     vrVal (:,:)
 
     method {mustBeMember(method,[ ...
+        "LinearRegression",...
         "Bag",...
         "LSBoost",...
         "RFR", ...
@@ -73,13 +74,17 @@ arguments
 
 end
 
-disp("Training ML forcing model...")
+disp("Training ML forcing model ("+method+") ...")
 
 if not(length(opt.HiddenLayerSizes) == opt.NumLayers)
             error("HiddenLayerSizes must be specified for all layers as a vector.")
 end
 
 switch method
+    case "LinearRegression"
+        
+        Regressor = fitlm(vrTrain{1},vrTrain{2});
+
     case {"Bag","LSBoost"}
 
         % weak learner baseline model

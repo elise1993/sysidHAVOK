@@ -46,6 +46,15 @@ arguments
 
     opt.PolynomialDegree (1,1) {mustBePositive,mustBeInteger, ...
         mustBeLessThanOrEqual(opt.PolynomialDegree,1)} = 1
+
+    opt.RegularizedDifferentiation (1,1) {mustBeMember(...
+        opt.RegularizedDifferentiation,[1,0])} = 1
+
+    opt.RegularizationParameter (1,1) {mustBeReal,mustBePositive} = 10
+
+    opt.DerivativeIterations (1,1) {mustBeReal,mustBePositive} = 10
+
+    opt.Conditioning (1,1) {mustBeReal,mustBePositive} = 1e-6
 end
 
 disp("Training HAVOK-SINDy model...")
@@ -69,10 +78,11 @@ aspectRatio = size(H,1) / size(H,2);
 if isfield(opt,'r')
     r = opt.r;
 else
-    if ~exist("optimal_SVHT_coef.m",'file')
-            disp("'optimal_SVHT_coef.m' not found in current directory, retrieving...")
+    filename = "optimal_SVHT_coef.m";
+    if ~exist(filename,'file')
+            disp(filename+" not found in current directory, retrieving...")
             url = "https://github.com/bwbrunton/dmd-neuro/blob/master/optimal_SVHT_coef.m?raw=true";
-            websave("./downloaded/optimal_SVHT_coef.m",url);
+            websave("./downloaded/"+filename,url);
     end
 
     hardThreshold = optimal_SVHT_coef(aspectRatio,0) * median(singularVals);
@@ -80,16 +90,57 @@ else
     r = min(opt.rmax,r);
 end
 
-% compute derivative
+% compute derivatives
 dVdt = derivativeCentralDiff4(V(:,1:r),t);
+dt = t(2)-t(1);
+
+if opt.RegularizedDifferentiation == true
+
+    filename = "TVRegDiff.m";
+    if ~exist(filename,'file')
+        disp(filename+" not found in current directory, retrieving...")
+        url = "https://github.com/JeffreyEarly/GLNumericalModelingKit/blob/master/Matlab/TVRegDiff.m?raw=true";
+        websave("./downloaded/"+filename,url);
+    end
+
+    % simpler computations with 'large', ideal for large systems >1000
+    if numel(V) > 1e6
+        ScaleOptimization = 'large';
+        indices = 3:length(V)-3;
+    else
+        ScaleOptimization = 'small';
+        indices = 3:length(V)-4;
+    end
+
+    % larger values give less accurate peaks but more stability
+
+    % plots/verbose
+    plotFlag=0;
+    diagFlag=1;
+
+    for i = 1:r
+
+        dVdt(:,i) = TVRegDiff(V(indices,i),...
+            opt.DerivativeIterations,...
+            opt.RegularizationParameter, ...
+            dVdt(:,i), ...
+            ScaleOptimization, ...
+            opt.Conditioning, ...
+            dt, ...
+            plotFlag, ...
+            diagFlag ...
+            );
+    
+    end
+end
 
 % retrieve SINDy files from github/dynamicslab if unavailable
-files = ["poolData.m","sparsifyDynamics.m","poolDataLIST.m"];
-for i = 1:length(files)
-    if ~exist(files(i),'file')
-        disp(files(i)+" not found in current directory, retrieving...")
+filename = ["poolData.m","sparsifyDynamics.m","poolDataLIST.m"];
+for i = 1:length(filename)
+    if ~exist(filename(i),'file')
+        disp(filename(i)+" not found in current directory, retrieving...")
         url = "https://github.com/dynamicslab/databook_matlab/blob/master/CH07/";
-        websave("./downloaded/"+files(i),url+files(i)+"?raw=true");
+        websave("./downloaded/"+filename(i),url+filename(i)+"?raw=true");
     end
 end
 

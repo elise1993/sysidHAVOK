@@ -12,16 +12,16 @@ function y = predictML(Regressor,x,method)
 arguments
     Regressor (1,1) {mustBeA(Regressor,["TreeBagger",...
         "classreg.learning.regr.RegressionEnsemble",...
-        "SeriesNetwork","struct"])}
+        "SeriesNetwork","struct","LinearModel"])}
 
     x (:,:) {mustBeReal}
 
-    method (1,1) {mustBeMember(method,["Bag","Boost","RFR","RFR-MEX",...
+    method (1,1) {mustBeMember(method,["LinearRegression","Bag","Boost","RFR","RFR-MEX",...
         "SVR","MLP","LSTM"])}
 end
 
 switch method
-    case {"Bag","LSBoost","RFR","SVR"}
+    case {"LinearRegression","Bag","LSBoost","RFR","SVR"}
         y = predict(Regressor,x);
 
     case "RFR-MEX"

@@ -29,6 +29,8 @@ xSimTrain = Predictions{1};
 xSimVal = Predictions{2};
 
 switch MLmethod
+    case "LinearRegression"
+        MLtitle = "Linear Regression";
     case "Bag"
         MLtitle = "Bootstrap Aggregation";
     case "LSBoost"
@@ -82,6 +84,9 @@ end
 leg = legend('','','True','Predicted');
 leg.Orientation = "horizontal";
 leg.Position = [.74,0,.1,.05];
-% set(gcf,'color','w')
 
-end
+
+% ylim([-0.05,0.05])
+% % xlim([92.7,93.1])
+% set(gcf,'color','w')
+% set(gcf,'color','#0d1117')

@@ -36,7 +36,9 @@ for i=1:2
     plot(tVal,x(:,2),':',linewidth=2,color="#D95319")
 
     resetPoints = 1:multiStepSize:length(tVal);
-    scatter(tVal(resetPoints),x(resetPoints,1),MarkerEdgeColor='white',linewidth=2)
+    if length(x)/length(resetPoints) >= 50
+        scatter(tVal(resetPoints),x(resetPoints,1),MarkerEdgeColor='white',linewidth=2)
+    end
 
     grid on
     set(gca,'fontsize',20)
@@ -45,9 +47,12 @@ for i=1:2
 
 end
 
-leg = legend('True','Predicted','Initial Condition');
+if length(x)/multiStepSize >= 10
+    leg = legend('True','Predicted','Initial Condition');
+else
+    leg = legend('True','Predicted');
+end
 leg.Orientation = "horizontal";
 leg.Position = [.74,0,.1,.05];
 % set(gcf,'color','w')
-
-end
+% set(gcf,'color','#0d1117')

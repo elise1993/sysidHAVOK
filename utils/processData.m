@@ -2,8 +2,7 @@ function [t,x,dt,xMean,xSTD] = processData(t,x,opt)
 %processData Add noise, remove outliers, interpolate, and normalize data.
 %
 %   [t,x] = processData(t,x,opt) is a data processing function where the
-%   user may add gaussian noise, remove outliers, interpolate, and
-%   normalize data.
+%   user may add noise, remove outliers, interpolate, and normalize data.
 % 
    
 %   Copyright 2023 Elise Jonsson
@@ -14,7 +13,19 @@ arguments(Input)
 
     x (:,1) {mustBeReal}
 
-    opt.DegreeOfNoise (1,1) {mustBeReal,mustBeGreaterThanOrEqual(opt.DegreeOfNoise,0)} = 0
+    opt.DegreeOfNoise (1,1) {mustBeReal,...
+        mustBeGreaterThanOrEqual(opt.DegreeOfNoise,0)} = 0
+
+    opt.NoiseDistribution {mustBeMember(opt.NoiseDistribution,["Gaussian",...
+        "Uniform","Gamma"])} = "Gaussian"
+
+    opt.PercentOutliers (1,1) {mustBeReal,...
+        mustBeGreaterThanOrEqual(opt.PercentOutliers,0)} = 0
+
+    opt.SmoothingMethod {mustBeMember(opt.SmoothingMethod,['moving',...
+        'lowess','loess','sgolay','rlowess','rloess'])} = 'moving'
+
+    opt.SmoothingWindowSize {mustBePositive,mustBeInteger} = 1
 
     opt.InterpolationMethod (1,1) {mustBeMember(opt.InterpolationMethod,...
         ["linear","nearest","next","previous","spline","pchip","cubic",...
@@ -40,25 +51,36 @@ arguments(Output)
     xSTD (1,1) {mustBeReal}
 end
 
-% add noise
-x = x + opt.DegreeOfNoise*std(x,'omitmissing')*randn(size(x));
+% corrupt data
+x = addNoise(x, ...
+    "Distribution",opt.NoiseDistribution,...
+    "DegreeOfNoise",opt.DegreeOfNoise ...
+    );
 
-% interpolate
-tmax = t(end);
-dt = t(2)-t(1);
-dt = dt*opt.InterpolationFactor;
-tNew = (t(1):dt:tmax)';
-x = interp1(t,x,tNew,opt.InterpolationMethod,"extrap");
-t = tNew;
+x = addOutliers(x, ...
+    "PercentOutliers",opt.PercentOutliers ...
+    );
 
-% remove outliers/missing values
+% enhance data
+x = smooth(x,...
+    opt.SmoothingWindowSize,...
+    opt.SmoothingMethod ...
+    );
+
+[x,t,dt] = interpolateData(x,t,...
+    "InterpolationFactor",opt.InterpolationFactor,...
+    "InterpolationMethod",opt.InterpolationMethod ...
+    );
+
 if isfield(opt,"OutlierMethod")
-    outliers = isoutlier(x,opt.OutlierMethod);
-    x(outliers) = nan;
+    x = filloutliers(x,...
+        opt.FillMethod,...
+        opt.OutlierMethod ...
+        );
 end
+
 x = fillmissing(x,opt.FillMethod);
 
-% normalize
 [xNorm,xMean,xSTD] = normalize(x);
 if opt.Normalize
     x = xNorm;

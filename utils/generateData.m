@@ -35,8 +35,9 @@ arguments
 
     opt.Tolerance (1,1) {mustBeReal,mustBePositive} = 1e-9;
 
-    opt.t (:,1) {mustBeReal,...
-        miscFunctions.mustBeMonotonic(opt.t)}
+    opt.tspan (1,2) {mustBeReal,miscFunctions.mustBeMonotonic(opt.tspan)}
+
+    opt.dt (1,1) {mustBeReal,mustBePositive}
 
     opt.x0 (:,:)
 
@@ -62,17 +63,26 @@ if ~isfield(opt,"x0")
     end
 end
 
-if ~isfield(opt,"t")
+if ~isfield(opt,"dt")
     switch system
-        case {"Lorenz","VanderPol","Duffing","DoublePendulum"}
-            opt.t = 0:0.01:200;
-        case "Rossler"
-            opt.t = 0:0.01:50;
-        case "MackeyGlass"
-            opt.t = 0:1:500;
-        case "MagneticFieldReversal"
-            opt.t = 0:1:1e4;
+        case {"Lorenz","VanderPol","Rossler","Duffing","DoublePendulum"}
+            opt.dt = 0.01;
+        case {"MackeyGlass","MagneticFieldReversal"}
+            opt.dt = 1;
     end
+end
+
+if ~isfield(opt,"tspan")
+    switch system
+        case {"Lorenz","VanderPol","Duffing","DoublePendulum","Rossler"}
+            t = 0:opt.dt:200;
+        case "MackeyGlass"
+            t = 0:opt.dt:2000;
+        case "MagneticFieldReversal"
+            t = 0:opt.dt:1e4;
+    end
+else
+    t = tspan(1):opt.dt:tspan(2);
 end
 
 if ~isfield(opt,"beta")
@@ -93,7 +103,7 @@ end
 switch system
     case "MackeyGlass"
 
-        MaxStep = opt.t(2) - opt.t(1);
+        MaxStep = t(2) - t(1);
         tauLags = 17;
         history = 0.8;
 
@@ -107,20 +117,19 @@ switch system
             @(t,x,xtau) MackeyGlass(t,x,xtau), ...
             tauLags, ...
             history, ...
-            opt.t, ...
+            t, ...
             tolerances ...
             );
 
-        t = solution.x;
-        x = (solution.y)';
+        x = deval(solution,t)';
 
     case "MagneticFieldReversal"
 
         load("data\MagneticFieldReversal.mat");
         x = double(x);
 
-        % n = length(opt.t);
-        % tmax = opt.t(end);
+        % n = length(t);
+        % tmax = t(end);
         % dt = ceil(tmax/n)*1e-3;
         % nPeriods = 1e-1*tmax/dt;
         % 
@@ -129,7 +138,7 @@ switch system
         % modelFunc = sde( ...
         %     F,G, ...
         %     "StartState",opt.x0, ...
-        %     "StartTime",opt.t(1) ...
+        %     "StartTime",t(1) ...
         %     );
         % 
         % rng(1,'twister')
@@ -161,7 +170,7 @@ switch system
 
         [t,x] = ode45( ...
             modelFunc, ...
-            opt.t, ...
+            t, ...
             opt.x0, ...
             tolerances ...
             );

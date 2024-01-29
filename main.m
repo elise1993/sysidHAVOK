@@ -37,11 +37,11 @@
 % size, but it will make identification of an optimal ML method more
 % difficult and might be prohibitevly expensive to run.
 % 
-% degOfNoise - the amount of Gaussian noise in the data x, as a percentage
+% DegreeOfNoise - the amount of Gaussian noise in the data x, as a fraction
 % of the standard deviation of x. Note: The noise level in x will affect
 % the optimal stackmax and r of the model.
 % 
-% polyDegree - specifies the polynomial degree of the HAVOK-SINDy model.
+% PolynomialDegree - specifies the polynomial degree of the HAVOK-SINDy model.
 % The standard HAVOK algorithm finds a linear representation in delay
 % coordinates using least-squares regression, meaning that the algorithm
 % tries to find a best-fit linear model dvdt = Av in a least-squares sense,
@@ -83,30 +83,43 @@ close all; clear; clc
 %% Hyperparameters
 
 % data
-SystemName = "MagneticFieldReversal";
-Tolerance = 1e-3;
+SystemName = "Lorenz";
+dt = 0.01;
+Tolerance = 1e-12;
 start = 1;
-DegreeOfNoise = 0;
-InterpolationMethod = "cubic";
-InterpolationFactor = 10;
-OutlierMethod = "median";
-FillMethod = "makima";
-Normalize = false;
 TrainFactor = 0.5;
 ValFactor = 0.1;
 
+% data corruption
+DegreeOfNoise = 0;
+NoiseDistribution = "Gaussian";
+PercentOutliers = 0;
+
+% data enhancement
+SmoothingMethod = 'moving';
+SmoothingWindowSize = 1;
+InterpolationMethod = "cubic";
+InterpolationFactor = 0.1;
+OutlierMethod = "median";
+FillMethod = "makima";
+Normalize = false;
+
 % HAVOK-SINDy model
-stackmax = 100;
-rmax = 4;
+stackmax = 39;
+rmax = 7;
 PolynomialDegree = 1;
 DegreeOfSparsity = 0;
+RegularizedDifferentiation = true;
+RegularizationParameter = 10;
+DerivativeIterations = 3;
+Conditioning = 1e-6;
 
 % ML model
 MLmethod = "RFR-MEX";
 D = 5;
-zoomCoords = [0,5e5;4e5,4.3e5];
+zoomCoords = [0,120;92,93];
 
-% ensemble methods (Bag, LSBoost, RFR)
+% ensemble methods (Bag, LSBoost, RFR, RFR-MEX)
 MaxNumSplits = 50000;
 NumTrees = 20;
 MinLeafSize = 27;
@@ -127,17 +140,31 @@ nSteps = 2e4;
 multiStepSize = 1000;
 SimulateForcing = true;
 
+% pre-loaded hyperparameters
+% load("tests\HAVOK-SINDy-Lorenz.mat");
+
 %% Prepare Data
 mkdir("./downloaded");
 addpath('./utils','./plotting','./models','./downloaded',genpath('./data/'));
 
 % generate nonlinear data
-[t,x] = generateData(SystemName,"Tolerance",Tolerance);
+[t,x] = generateData(SystemName,...
+    "Tolerance",Tolerance,...
+    "dt",dt ...
+    );
 
 % process data
 x = x(:,1);
 [t,x,dt] = processData(t,x, ...
+    ...
+    ... % data corruption
     'DegreeOfNoise',DegreeOfNoise, ...
+    'NoiseDistribution',NoiseDistribution, ...
+    'PercentOutliers',PercentOutliers, ...
+    ...
+    ... % data enhancement
+    'SmoothingMethod',SmoothingMethod, ...
+    'SmoothingWindowSize',SmoothingWindowSize, ...
     'InterpolationMethod',InterpolationMethod, ...
     'InterpolationFactor',InterpolationFactor, ...
     'OutlierMethod',OutlierMethod, ...
@@ -163,9 +190,13 @@ plotData(tTrain,xTrain,tVal,xVal);
 % construct HAVOK-SINDy model
 [Xi,list,U,S,VTrain,r] = sysidHAVOK( ...
     xTrain,tTrain,stackmax, ...
-    'r',rmax, ...
+    'rmax',rmax, ...
     'DegreeOfSparsity',DegreeOfSparsity, ...
-    'PolynomialDegree',PolynomialDegree ...
+    'PolynomialDegree',PolynomialDegree, ...
+    'RegularizedDifferentiation',RegularizedDifferentiation, ...
+    'RegularizationParameter',RegularizationParameter, ...
+    'DerivativeIterations',DerivativeIterations, ...
+    'Conditioning',Conditioning ...
     );
 
 % check how intermittent forcing behaves for this HAVOK decomposition
@@ -277,12 +308,15 @@ plotAttractor( ...
 
 %% Impulse Response of HAVOK Model
 
-% impulse response using exact vr
-[~,vimpulse] = impulseHAVOK(A,B,tVal(1:end-stackmax),vrVal',vVal0);
+% impulse response using exact vr as control
+[~,vimpulse] = impulseHAVOK(A,B, ...
+    tVal(1:end-stackmax-1),vrVal',VVal(1:r-1,1));
 
-hold on
-plot(tVal(1:end-stackmax),VVal(1,:))
-title('Impulse Response of HAVOK Model with True Intermittent Forcing')
-set(gca,'fontsize',20)
-legend('Predicted','True')
+ximpulse = recoverState(vimpulse,U,S,r,'cross-diagonal');
+
+plotImpulse( ...
+    tVal(1:end-stackmax-1), ...
+    xVal(1:end-stackmax-1), ...
+    ximpulse ...
+    )
 

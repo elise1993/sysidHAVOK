@@ -18,6 +18,15 @@ classdef miscFunctions
             end
         end
 
+        % test for equal size
+        function mustBeEqualSize(A,B)
+            if ~isequal(size(A),size(B))
+                eid = 'Size:notEqual';
+                msg = 'The matrices, (A) and (B), are not the same size.';
+                error(eid,msg)
+            end
+        end
+
         % test for monotonicity
         function mustBeMonotonic(x)
             if any(diff(x) < 0)
@@ -29,9 +38,9 @@ classdef miscFunctions
 
         % test for equidistant
         function mustBeEquidistant(x)
-            tol = 1;
             dx = diff(x);
-            if not(all(ismembertol(dx,dx(1),tol*dx(1))))
+            tol = dx(1)*0.01;
+            if not(all(ismembertol(dx,dx(1),tol)))
                 eid = 'Equidistant:false';
                 msg = 'The elements of the array (x) are not equidistant.';
                 error(eid,msg)

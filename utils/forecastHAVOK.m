@@ -26,11 +26,11 @@ arguments
     stackmax (1,1)
     r (1,1)
     Regressor
-    MLmethod (1,1) {mustBeMember(MLmethod,["Bag","Boost","RFR","RFR-MEX",...
+    MLmethod (1,1) {mustBeMember(MLmethod,["LinearRegression","Bag","Boost","RFR","RFR-MEX",...
         "SVR","MLP","LSTM"])}
     D (1,1) {mustBeReal,mustBePositive}
     nSteps (1,1) {mustBeReal,mustBePositive}
-    multiStepSize (1,1) {mustBeReal,mustBePositive}
+    multiStepSize (1,1) {mustBeReal,mustBePositive} = 1
     opt.SimulateForcing {mustBeMember(opt.SimulateForcing,...
         [1,0])} = true
 end
@@ -40,42 +40,56 @@ disp("Forecasting HAVOK-SINDy-ML model...")
 % get initial conditions for training/validation data in delay coordinates
 vVal0 = V(1:r-1,1);
 vrVal = V(r,:);
-nMax = length(vrVal);
+nMax = length(vrVal)-1;
 
 if opt.SimulateForcing
-    % run HAVOK-SINDy-ML forecast with forcing model
+    % run HAVOK-SINDy-ML forecast (forced linear model)
     vr = vrVal(1);
 else
-    % run HAVOK-SINDy-ML forecast without forcing model (feed true forcing)
-    vr = vrVal(1:nSteps);
+    % run HAVOK-SINDy forecast (linear model)
+    try
+        vr = vrVal(1:nSteps);
+    catch
+        vr = vrVal(1:nMax);
+    end
 end
 
 v = vVal0;
 US = U(:,1:r-1)*S(1:r-1,1:r-1);
 
-i = 2;
+i = 1;
 while i < nSteps && i < nMax
 
-    h = US*v(:,i-1);
-
-    if opt.SimulateForcing
-        if mod(i+1,multiStepSize)==1
-            vr(i) = vrVal(i);
-            v(:,i) = V(1:r-1,i);
-            disp("reset at "+i)
-        else
-            vr(i) = predictML(Regressor,h(1:D:end)',MLmethod);
-            % vr(i) = regRF_predict(h(1:D:end)',Regressor);
-            v(:,i) = Ad*v(:,i-1) + Bd0*vr(i-1) + Bd1*vr(i);
-        end
+    if ~mod(i,multiStepSize)
+        vr0 = vrVal(i);
+        v0 = V(1:r-1,i);
+    else
+        vr0 = vr(i);
+        v0 = v(:,i);
     end
 
-    if mod(i,100)==0 || i==nSteps
+    h = US*v0;
+    
+    if opt.SimulateForcing
+        vr1 = predictML(Regressor,h(1:D:end)',MLmethod);
+    else
+        vr0 = 0;
+        vr1 = 0;
+    end
+        
+    v(:,i+1) = Ad*v0 + Bd0*vr0 + Bd1*vr1;
+    
+    vr(i+1) = vr1;
+
+    if ~mod(i,100) || i==nSteps
         disp("step: "+i+"/"+nSteps)
     end
 
     i = i+1;
 end
+
+
+
 
 if nMax < nSteps
     warning("Not enough validation data to forecast further. Stopping at i="+(i-1)+"/"+nSteps)
