@@ -16,6 +16,12 @@ arguments
     multiStepSize (1,1) {mustBeReal,mustBePositive}
 end
 
+% remove lines between reset points
+for i=1:multiStepSize:length(xSim)
+    xSim(i:i+4) = nan;
+    vrSim(i:i+4) = nan;
+end
+
 % plot
 h = figure;
 for i=1:2
@@ -42,7 +48,7 @@ for i=1:2
 
     grid on
     set(gca,'fontsize',20)
-    range = [min(x(:))-std(x(:)),max(x(:))+std(x(:))];
+    range = [nanmin(x(:))-nanstd(x(:)),nanmax(x(:))+nanstd(x(:))];
     ylim(range)
 
 end

@@ -1,4 +1,4 @@
-function h = plotAttractor(t,V,Vsim)
+function h = plotAttractor(t,V,Vsim,multiStepSize)
 %plotAttractor Plot attractor
 %
 %    h = plotAttractor(t,V,Vsim) plots the "shadowed" attractor in the
@@ -12,6 +12,12 @@ arguments
     t (:,1) {miscFunctions.mustBeMonotonic(t)}
     V (:,:) {miscFunctions.mustBeEqualLength(t,V)}
     Vsim (:,:) {miscFunctions.mustBeEqualLength(t,Vsim)}
+    multiStepSize (1,1) {mustBeReal,mustBePositive}
+end
+
+% remove lines between reset points
+for i=1:multiStepSize:length(Vsim)
+    Vsim(:,i:i+4) = nan;
 end
 
 % truncate to first three dimensions
@@ -26,9 +32,9 @@ v = [V,Vsim];
 
 % axis limits
 xyzLimits = [
-    min(v(1,:))-.5*std(v(1,:)),max(v(1,:))+.5*std(v(1,:)),...
-    min(v(2,:))-.5*std(v(2,:)),max(v(2,:))+.5*std(v(2,:)),...
-    min(v(3,:))-.5*std(v(3,:)),max(v(3,:))+.5*std(v(3,:))...
+    nanmin(v(1,:))-.5*nanstd(v(1,:)),nanmax(v(1,:))+.5*nanstd(v(1,:)),...
+    nanmin(v(2,:))-.5*nanstd(v(2,:)),nanmax(v(2,:))+.5*nanstd(v(2,:)),...
+    nanmin(v(3,:))-.5*nanstd(v(3,:)),nanmax(v(3,:))+.5*nanstd(v(3,:))...
     ];
 
 % plot

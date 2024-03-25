@@ -210,6 +210,12 @@ switch method
     case "TCN"
         % temporal convolutional network (WIP)
 
+    case "SINDy"
+
+        % WIP
+        
+
+
 end
 
 switch method
